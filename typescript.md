@@ -78,6 +78,7 @@ Quick run karne ke liye `ts-node` use karo (bina manually compile kiye directly 
 ```bash
 npm install -g ts-node
 ts-node file.ts
+ts-node app.ts ; npx tsc app.ts --ignoreConfig // to create app.js file and run ts file
 ```
 
 ---
