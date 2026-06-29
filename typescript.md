@@ -494,6 +494,24 @@ interface Employee extends Person {
 ```
 
 ---
+### Merging
+```ts
+// Part 1: Ek interface banaya
+interface User {
+    name: string;
+}
+// Part 2: Same naam se dobara banaya
+interface User {
+    age: number;
+}
+// Final Result: Dono properties merge ho gayi hain
+const myUser: User = {
+    name: "Anand",
+    age: 25
+};
+```
+
+---
 
 ## 14. `type` vs `interface`
 
