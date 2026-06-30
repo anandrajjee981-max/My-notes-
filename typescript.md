@@ -606,7 +606,7 @@ abstract class Shape {
 }
 
 class Circle extends Shape {
-  constructor(private radius: number) { super(); }
+  constructor(private radius: number) { super(); } // Apne Parent Class (Super Class) ke constructor ko call karna."
   area(): number {
     return Math.PI * this.radius ** 2;
   }
