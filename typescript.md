@@ -600,7 +600,7 @@ class Person implements Greetable {
 ```ts
 abstract class Shape {
   abstract area(): number;     // implementation child class mein zaroori
-  describe(): string {
+  describe(): string { // kuch v name ho skta hain yey resuable code hain jo hrr jgh fit hoga 
     return `Area is ${this.area()}`;
   }
 }
