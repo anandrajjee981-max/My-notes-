@@ -220,6 +220,181 @@ Look up how VS Code structures its Main/Renderer split (it's open source). Ident
 
 ---
 
-*End of Chapter 1. Chapter 2 (Project Architecture) will cover the full Nexus Editor folder structure, explaining why every directory — `apps/desktop`, `apps/backend`, `packages/`, `docs/`, `scripts/`, `assets/` — exists and what belongs where.*
+*End of Chapter 1.*
 
-**Say "next chapter" or "continue" to generate Chapter 2.**
+---
+
+# Chapter 2 — Project Architecture
+
+## 2.1 Why a Monorepo?
+
+Nexus Editor is not one app — it's actually a small ecosystem: a desktop shell, a backend/AI service layer, shared types, build tooling, and documentation. Cramming all of that into a single flat folder gets unmanageable fast (imagine your React components, your Electron main-process code, your AI prompt templates, and your build scripts all fighting for space in one `src/`).
+
+Instead, Nexus Editor uses a **monorepo** — one Git repository containing multiple, clearly separated packages/apps that can depend on each other, be built independently, and be versioned together. This is the same strategy used by VS Code, Slack's desktop client, and most serious Electron products at scale.
+
+```mermaid
+graph TD
+    Root[Nexus-Editor/] --> Apps[apps/]
+    Root --> Packages[packages/]
+    Root --> Docs[docs/]
+    Root --> Scripts[scripts/]
+    Root --> Assets[assets/]
+
+    Apps --> Desktop[desktop/ - Electron + React]
+    Apps --> Backend[backend/ - AI service, optional local server]
+
+    Packages --> Shared[shared/ - types, utils, constants]
+    Packages --> UI[ui/ - shared React components]
+    Packages --> Config[config/ - eslint, tsconfig, build configs]
+```
+
+## 2.2 Full Folder Structure
+
+```
+Nexus-Editor/
+│
+├── apps/
+│   ├── desktop/                  # The Electron application itself
+│   │   ├── src/
+│   │   │   ├── main/             # Main Process code
+│   │   │   │   ├── index.ts      # App entry point (app.whenReady, etc.)
+│   │   │   │   ├── windows/      # BrowserWindow creation & management
+│   │   │   │   ├── ipc/          # ipcMain handlers, grouped by domain
+│   │   │   │   ├── fs/           # File system logic (read/write/watch)
+│   │   │   │   ├── terminal/     # node-pty integration
+│   │   │   │   └── git/          # simple-git integration
+│   │   │   │
+│   │   │   ├── preload/          # Preload scripts
+│   │   │   │   └── index.ts      # contextBridge API exposure
+│   │   │   │
+│   │   │   └── renderer/         # Renderer Process = the React app
+│   │   │       ├── src/
+│   │   │       │   ├── components/
+│   │   │       │   ├── pages/
+│   │   │       │   ├── editor/   # Monaco integration
+│   │   │       │   ├── ai/       # AI chat panel, context builder UI
+│   │   │       │   ├── hooks/
+│   │   │       │   └── state/    # Zustand/Redux store
+│   │   │       ├── index.html
+│   │   │       └── vite.config.ts
+│   │   │
+│   │   ├── electron-builder.yml  # Packaging config
+│   │   └── package.json
+│   │
+│   └── backend/                  # AI orchestration service (can run locally or remote)
+│       ├── src/
+│       │   ├── agents/           # RAG pipelines, embeddings, prompt logic
+│       │   ├── routes/           # If exposed via local HTTP server
+│       │   └── index.ts
+│       └── package.json
+│
+├── packages/
+│   ├── shared/                   # Code shared between desktop & backend
+│   │   ├── types/                # Shared TypeScript interfaces (IPC contracts!)
+│   │   ├── constants/
+│   │   └── utils/
+│   │
+│   ├── ui/                       # Shared, reusable React components (buttons, modals)
+│   │
+│   └── config/                   # Centralized eslint, prettier, tsconfig base files
+│
+├── docs/                         # This handbook, ADRs, architecture diagrams
+│
+├── scripts/                      # Build, release, codegen, CI helper scripts
+│
+├── assets/                       # App icons, installer graphics, splash screens
+│
+├── .github/
+│   └── workflows/                # CI/CD pipelines
+│
+├── package.json                  # Root workspace config
+├── pnpm-workspace.yaml           # (or turbo.json / nx.json)
+└── tsconfig.base.json
+```
+
+## 2.3 Why Every Folder Exists
+
+### `apps/desktop/` — Where Electron Lives
+This is the actual shipped product: the Electron shell. It contains three clearly separated subfolders that map **directly** onto the architecture from Chapter 1:
+
+- `main/` → Main Process code. Anything that touches the file system, spawns processes, manages windows, or talks to the OS lives here. Notice it's further split by *domain* (`fs/`, `terminal/`, `git/`, `ipc/`) rather than dumped into one file — at production scale, a single `main.js` with 3,000 lines is unmaintainable.
+- `preload/` → The bridge scripts. Kept separate because they have a different build target and a different security posture than both main and renderer code.
+- `renderer/` → This is where your **frontend lives** — the entire React application, including the Monaco editor integration, the AI chat UI, and all visual components. It's built with Vite and, critically, has *no* Node.js access at runtime (per Chapter 1's security model), even though it physically sits inside the same folder tree.
+
+### `apps/backend/` — Where AI/Server Logic Lives
+Even though Nexus Editor is a desktop app, the AI features (RAG pipeline, embeddings, prompt orchestration — Chapter 10) are complex enough to deserve their own package, separate from Electron's main process. This keeps `main/` focused on OS/window concerns, and keeps AI logic testable and potentially reusable (e.g., if you ever offer a cloud-hosted version of Nexus Editor's AI features).
+
+### `packages/shared/` — Shared Code
+The **most important** package for correctness. IPC (Chapter 5) relies on Main and Renderer agreeing on exact function signatures and payload shapes. If you define `readFile(path: string): Promise<string>` in the main process but the renderer expects `Promise<{content: string, encoding: string}>`, you get silent runtime bugs. `packages/shared/types/` holds the single source of truth for these contracts, imported by both `main/` and `renderer/`.
+
+### `packages/ui/` — Shared Components
+Purely visual, reusable React pieces (buttons, dialogs, tooltips) that might be used across multiple parts of the renderer, or even a future companion web app (e.g., a marketing site or docs site using the same design system).
+
+### `packages/config/` — Shared Configs
+Centralizes `eslint`, `prettier`, and base `tsconfig.json` so `apps/desktop` and `apps/backend` don't duplicate (and drift out of sync on) linting/formatting rules.
+
+### `docs/` — Documentation
+This handbook lives here, along with Architecture Decision Records (ADRs) — short markdown files documenting *why* a significant technical choice was made (e.g., "why pnpm over npm," "why Zustand over Redux"). Six months from now, you'll thank yourself.
+
+### `scripts/` — Build & Automation
+Custom Node.js/shell scripts for tasks that don't belong in `package.json` one-liners: generating icons for all platforms, bumping versions across all `package.json` files in the monorepo, running release checklists.
+
+### `assets/` — Static/Build Assets
+Not runtime assets used by the React app (those live in `renderer/public/`) — this is specifically for **build-time and installer** assets: app icons (`.ico`, `.icns`, `.png` at various sizes), DMG background images, installer splash screens. `electron-builder` (Chapter 12) reads directly from here.
+
+### Root-level files
+- `package.json` at the root defines the **workspace** (via `pnpm-workspace.yaml`), not a runnable app itself. It holds dev-tooling dependencies shared across the repo (TypeScript, ESLint, Prettier, Turborepo/Nx if used) and workspace-wide scripts like `pnpm build` that fan out to every app/package.
+- `tsconfig.base.json` — the root TypeScript config that every package extends, enforcing consistent compiler options (strict mode, module resolution) project-wide.
+
+## 2.4 Build vs. Production Folders
+
+It's worth explicitly separating **source** from **output**, since this trips up beginners:
+
+| Folder | Purpose | Committed to Git? |
+|---|---|---|
+| `apps/desktop/src/` | Hand-written source code | ✅ Yes |
+| `apps/desktop/dist/` | Compiled output (Vite build of renderer, tsc output of main) | ❌ No (`.gitignore`) |
+| `apps/desktop/release/` | Final packaged installers (`.exe`, `.dmg`, `.AppImage`) from `electron-builder` | ❌ No |
+| `node_modules/` | Installed dependencies (per-package, hoisted by pnpm) | ❌ No |
+
+`dist/` is intermediate — it's what actually gets loaded by Electron in production mode (Chapter 4 explains dev vs. production loading in detail). `release/` is the final, distributable artifact — what a user downloads and double-clicks to install.
+
+---
+
+## Common Mistakes (Chapter 2)
+
+1. **Mixing main-process and renderer-process code in the same folder/file.** If `src/utils/fileHelpers.ts` is imported by *both* a main-process file and a renderer component, you risk accidentally bundling Node.js-only code (like `fs`) into the renderer bundle, which will break or create security holes.
+2. **Putting IPC type definitions in only one side (main or renderer).** This guarantees drift. Always define IPC contracts once, in `packages/shared/types/`, and import from both sides.
+3. **Treating `assets/` and `public/` as the same thing.** `public/` (inside the renderer) is for runtime UI assets bundled into the app; `assets/` at the root is for build-time installer assets. Confusing them causes broken icons in production builds.
+4. **Committing `dist/`, `release/`, or `node_modules/` to Git.** Bloats the repo and causes merge conflicts on generated files.
+5. **Flat, unstructured `main/` folder.** A single giant `main.js` handling windows, IPC, file system, terminal, and Git all in one file becomes unreadable past a few hundred lines. Split by domain early.
+
+---
+
+## Interview Questions (Chapter 2)
+
+1. Why does a production Electron app benefit from a monorepo structure instead of one flat repository?
+2. What kind of code should live in `packages/shared/` versus `packages/ui/`? Give an example of each.
+3. Why is it dangerous for a utility file to be imported by both `main/` and `renderer/` code without care?
+4. What's the difference between `assets/` at the project root and a `public/` folder inside the renderer app?
+5. Explain the purpose of `dist/` vs `release/` in the build pipeline.
+6. Why should IPC payload types be defined in a shared package rather than duplicated in main and renderer?
+
+---
+
+## Practical Exercises (Chapter 2)
+
+**Exercise 2.1 — Structure From Scratch**
+Without copying the example above, sketch your own version of the Nexus Editor folder tree from memory, based only on the responsibilities you learned in Chapter 1 (Main/Renderer/Preload). Then compare it to the structure in this chapter and note any differences.
+
+**Exercise 2.2 — Contract Design**
+Design (on paper, in TypeScript syntax, no implementation) the shared type for a single IPC contract: `fs:read-file`. Define the request payload and the response payload as they'd live in `packages/shared/types/`.
+
+**Exercise 2.3 — Audit**
+Pick any real open-source Electron app on GitHub (VS Code, Obsidian's community plugins, or similar). Identify: where is their main process code, where is their renderer code, and do they use a monorepo structure? Compare to Nexus Editor's approach.
+
+---
+
+*End of Chapter 2. Chapter 3 (Installation Guide) covers setting up Node.js, pnpm, Git, VS Code, Electron, React, Vite, and TypeScript from scratch — plus a full explanation of ESM vs. CommonJS and why Nexus Editor picks one over the other.*
+
+**Say "next chapter" or "continue" to generate Chapter 3.**
