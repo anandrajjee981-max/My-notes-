@@ -395,6 +395,235 @@ Pick any real open-source Electron app on GitHub (VS Code, Obsidian's community 
 
 ---
 
-*End of Chapter 2. Chapter 3 (Installation Guide) covers setting up Node.js, pnpm, Git, VS Code, Electron, React, Vite, and TypeScript from scratch — plus a full explanation of ESM vs. CommonJS and why Nexus Editor picks one over the other.*
+*End of Chapter 2.*
 
-**Say "next chapter" or "continue" to generate Chapter 3.**
+---
+
+# Chapter 3 — Installation Guide
+
+This chapter sets up every tool Nexus Editor needs, explains **why** each one is needed (not just how to install it), and ends with a full breakdown of `package.json` and the ESM vs. CommonJS decision that affects every file you'll write from here on.
+
+## 3.1 Node.js
+
+**What it is:** A JavaScript runtime built on Chrome's V8 engine that lets JavaScript run outside a browser — on your machine, in a terminal, or (in our case) inside Electron's Main Process.
+
+**Why Nexus Editor needs it:** Electron's Main Process *is* a Node.js process. Every file system operation, terminal spawn, and Git command in this handbook runs through Node.js APIs. You also need Node.js locally to run build tools (Vite, TypeScript compiler, pnpm) during development.
+
+**Install:**
+- Download the **LTS (Long-Term Support)** version from nodejs.org — never the "Current" version for a production app, since LTS receives stability-focused updates.
+- Verify:
+```bash
+node --version   # should print v20.x.x or later
+npm --version
+```
+
+**Version note:** Electron bundles its *own* internal Node.js version inside the packaged app. The Node.js you install locally is only used for development tooling — but keeping your local version close to Electron's bundled version avoids subtle API mismatches, especially with native modules (relevant in Chapter 8 for `node-pty`).
+
+## 3.2 npm
+
+**What it is:** Node Package Manager — installed automatically with Node.js. It's the default tool for installing JavaScript/TypeScript packages from the npm registry.
+
+**Why we mention it but don't use it as primary:** npm works fine for small projects, but for a monorepo like Nexus Editor (Chapter 2), npm's workspace support is weaker and its `node_modules` handling is less disk-efficient than pnpm's. We use npm's *registry* (all packages still come from npmjs.com) but not npm as the *installer*.
+
+## 3.3 pnpm
+
+**What it is:** A faster, disk-space-efficient alternative to npm/yarn, with first-class monorepo ("workspace") support.
+
+**Why Nexus Editor uses it specifically:**
+- **Disk efficiency:** pnpm uses a single global content-addressable store and hard-links packages into each project, instead of duplicating `node_modules` per package. In a monorepo with `apps/desktop`, `apps/backend`, and multiple `packages/`, this saves gigabytes.
+- **Strict dependency resolution:** pnpm doesn't "hoist" dependencies loosely like npm does, which prevents a common class of bugs where a package accidentally works because of a dependency it never explicitly declared (a "phantom dependency").
+- **Native workspace protocol:** `workspace:*` lets `apps/desktop` depend on `packages/shared` as a local, always-in-sync package rather than a published npm version.
+
+**Install:**
+```bash
+npm install -g pnpm
+pnpm --version
+```
+
+## 3.4 Git
+
+**What it is:** Distributed version control — tracks every change to your codebase, enables branching, and (relevantly for Chapter 9) is the same tool Nexus Editor's built-in Git panel will operate on programmatically via `simple-git`.
+
+**Why it's foundational, not optional:** Beyond your own workflow, Nexus Editor *is itself* a Git client for the projects opened inside it. Understanding Git at the command line is a prerequisite for building and debugging Chapter 9's Git integration.
+
+**Install:** Download from git-scm.com, then configure identity:
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+## 3.5 VS Code
+
+**What it is:** The editor you'll use to *build* Nexus Editor (a pleasant bit of irony — you're building a code editor, inside a code editor).
+
+**Why VS Code specifically:** It's built on Electron itself, so its debugging tools (especially the integrated terminal and the ability to attach a debugger to a Node.js process) map directly onto the kind of debugging you'll do with Electron's Main Process. Recommended extensions: ESLint, Prettier, and the TypeScript language features that ship built-in.
+
+## 3.6 Electron
+
+**What it is:** The framework itself, as an npm package (`electron`).
+
+**Why it's a devDependency, not a dependency:** This surprises beginners. `electron` is installed as a **devDependency** because it's not code your app imports at runtime in the traditional sense — it's a *binary* (a prebuilt Chromium + Node.js executable) that gets downloaded and used to *run* your app during development, and gets bundled by `electron-builder` (Chapter 12) for production. Your app's actual runtime code (main/preload/renderer) doesn't `import` the electron npm package as a library the way you'd import `react`.
+
+```bash
+pnpm add -D electron
+```
+
+## 3.7 React
+
+**What it is:** The UI library powering the entire Renderer Process — every component, from the file tree to the AI chat panel, is a React component.
+
+**Why React here specifically:** It's a Renderer-Process-only dependency — it never runs in the Main Process. Given you already know React (per this handbook's assumed audience), the learning curve here is purely about *where* React fits in Electron's architecture (Chapter 1), not React itself.
+
+```bash
+pnpm add react react-dom
+```
+
+## 3.8 Vite
+
+**What it is:** A modern, fast build tool and dev server for frontend code, replacing older tools like Webpack for most new projects.
+
+**Why Vite for the renderer:** Vite's dev server offers near-instant Hot Module Replacement (HMR), which matters enormously when iterating on UI-heavy features like the Monaco editor integration or the AI chat panel. For Electron specifically, we use `vite-plugin-electron` (or a manual dual-config setup) so Vite can build the renderer *and* watch/rebuild the main and preload TypeScript files during development.
+
+```bash
+pnpm add -D vite @vitejs/plugin-react
+```
+
+## 3.9 TypeScript
+
+**What it is:** A typed superset of JavaScript that compiles down to plain JS.
+
+**Why it's non-negotiable for Nexus Editor:** The single biggest source of Electron bugs is a **mismatch between what the Main Process sends over IPC and what the Renderer expects to receive** (Chapter 2, 2.3). TypeScript, combined with the shared types in `packages/shared/types/`, catches these mismatches at compile time instead of as a silent runtime `undefined`.
+
+```bash
+pnpm add -D typescript
+```
+
+---
+
+## 3.10 ESM vs. CommonJS
+
+This is one of the most confusing topics for developers new to the Node.js/Electron ecosystem, so let's be precise.
+
+**CommonJS (CJS)** is Node.js's original module system:
+```js
+const fs = require('fs');
+module.exports = { readFile };
+```
+
+**ECMAScript Modules (ESM)** is the modern, standardized JavaScript module system (the same `import`/`export` syntax used in the browser and in React):
+```js
+import fs from 'fs';
+export { readFile };
+```
+
+### Why this matters specifically in Electron
+
+- The **Renderer Process** (your React/Vite code) uses **ESM** exclusively — this is standard for any modern frontend tooling, no debate needed.
+- The **Main Process and Preload script** run in Node.js, where **both** module systems are valid, but they have different loading behaviors, different `__dirname` availability (ESM doesn't have `__dirname` natively), and — critically — **some native Node.js addons and certain Electron APIs have historically had friction with ESM** in the main process.
+
+### What Nexus Editor uses, and why
+
+**Decision: CommonJS for the Main Process and Preload script, ESM for the Renderer.**
+
+Reasoning:
+1. Electron's own internals and many native modules (`node-pty` for Chapter 8's terminal integration is a prime example) have the most battle-tested compatibility with CommonJS in the main process. Using ESM there is *possible* in recent Electron versions but introduces edge cases (like needing `.mjs` extensions or careful `package.json` `"type"` configuration) that aren't worth the complexity for a production app.
+2. The Renderer, being bundled by Vite, uses ESM because that's simply how modern frontend tooling works — Vite assumes ESM by default and it enables proper tree-shaking.
+3. TypeScript compiles both to their respective targets regardless of which syntax you write in your `.ts` source files, so in practice you can *write* `import`/`export` syntax everywhere in TypeScript, and let the `tsconfig.json` `"module"` setting per-package (`CommonJS` for `main/`, `ESNext` for `renderer/`) determine the actual output format. This gives you consistent authoring syntax with correct compiled output for each environment.
+
+```mermaid
+graph LR
+    A[main/*.ts - written with import/export] -->|tsc, module: CommonJS| B[dist/main/*.js - require/module.exports]
+    C[renderer/*.tsx - written with import/export] -->|Vite, ESM native| D[dist/renderer/*.js - ESM bundles]
+```
+
+---
+
+## 3.11 package.json, Fully Explained
+
+At the root of the monorepo:
+
+```json
+{
+  "name": "nexus-editor",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "turbo": "^2.0.0"
+  }
+}
+```
+
+- **`"name"`** — the package identifier. Even for a private, unpublished monorepo root, npm/pnpm requires this field.
+- **`"private": true`** — prevents this package (and by extension, accidental `pnpm publish` of your root) from ever being published to the npm registry. Essential for any application (as opposed to a library).
+- **`"packageManager"`** — pins the exact pnpm version for the whole team/CI, preventing "works on my machine" issues from pnpm version drift.
+- **`"scripts"`** — here we delegate to **Turborepo** (`turbo run dev`), which fans a single command out to every app/package's own `dev` script in the correct dependency order, with caching. `apps/desktop/package.json` and `apps/backend/package.json` each define their own local `dev`/`build` scripts underneath.
+- **`"devDependencies"`** — tools needed to *develop* the project but not shipped inside the final app.
+
+Inside `apps/desktop/package.json`, you'd additionally see:
+
+```json
+{
+  "name": "@nexus-editor/desktop",
+  "main": "dist/main/index.js",
+  "dependencies": {
+    "electron-updater": "^6.0.0",
+    "simple-git": "^3.25.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0",
+    "vite": "^5.3.0",
+    "react": "^18.3.0"
+  }
+}
+```
+
+- **`"main"`** — this is the field Electron itself reads on launch: it's the entry point to your **compiled** Main Process code (not source). This is what runs when the app starts.
+- Note `electron` and `electron-builder` are devDependencies (Section 3.6), while things like `electron-updater` and `simple-git` are real runtime `dependencies`, because that code actually executes inside the shipped app.
+
+---
+
+## Common Mistakes (Chapter 3)
+
+1. **Installing `electron` as a regular dependency instead of a devDependency.** This bloats your production dependency tree unnecessarily and misrepresents what actually ships (the Electron *binary* is bundled separately by electron-builder, not pulled from `node_modules` at runtime the normal way).
+2. **Mixing npm and pnpm in the same repo.** Having both a `package-lock.json` and a `pnpm-lock.yaml` causes non-deterministic installs across team members' machines and CI.
+3. **Trying to use ESM everywhere "for consistency" without understanding the main-process tradeoffs.** Leads to obscure `ERR_REQUIRE_ESM` errors and native module loading failures with things like `node-pty`.
+4. **Forgetting `"private": true`** on an application's root `package.json`, risking an accidental publish.
+5. **Not pinning the Electron version.** Using `"electron": "*"` or a loose range means your dev environment and CI could silently pick up a new major Electron version with breaking API changes.
+
+---
+
+## Interview Questions (Chapter 3)
+
+1. Why is `electron` typically listed as a devDependency rather than a dependency, even though the whole app depends on it to run?
+2. What specific advantage does pnpm's workspace model give a monorepo like Nexus Editor over plain npm?
+3. Explain, in your own words, the practical difference between CommonJS and ESM, and why Electron's Main Process commonly favors CommonJS.
+4. What does the `"main"` field in `apps/desktop/package.json` point to, and why does it point to `dist/` rather than `src/`?
+5. Why might a native Node.js module like `node-pty` behave differently under ESM vs. CommonJS in the main process?
+
+---
+
+## Practical Exercises (Chapter 3)
+
+**Exercise 3.1 — Environment Setup**
+Install Node.js (LTS), pnpm, and Git on your machine. Run `node -v`, `pnpm -v`, and `git --version` and confirm all three succeed.
+
+**Exercise 3.2 — Module System Investigation**
+Create two tiny scratch files: one `.cjs` using `require`/`module.exports`, and one `.mjs` using `import`/`export`. Run both with `node file.cjs` and `node file.mjs` and observe any differences (e.g., try accessing `__dirname` in each).
+
+**Exercise 3.3 — package.json Audit**
+Open any Electron open-source project's `package.json` on GitHub (e.g., a small Electron boilerplate repo). Identify which dependencies are devDependencies vs. dependencies, and reason about *why* each one is classified that way, using this chapter's logic.
+
+---
+
+*End of Chapter 3. Chapter 4 (Electron Lifecycle) covers `app.whenReady()`, `BrowserWindow` creation and management, window/app events, the differences between dev mode and production mode loading, and the reload/close lifecycle in full detail.*
+
+**Say "next chapter" or "continue" to generate Chapter 4.**
