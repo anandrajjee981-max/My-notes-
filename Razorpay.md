@@ -302,36 +302,43 @@ amount: 500 * 100
 ```
 
 ---
+# ⚛️ React Razorpay Integration
 
-# 7. Add Razorpay Checkout
+Instead of manually loading Razorpay Checkout through `public/index.html`, React applications can also use the **`react-razorpay`** package.
 
-For a React application, include Razorpay Checkout in:
+## 1. Install `react-razorpay`
 
-```text
-public/index.html
-```
-
-```html
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-```
-
-Install Axios:
+Inside the React project:
 
 ```bash
-npm install axios
+npm install react-razorpay
 ```
+
+This package provides a React-friendly way to initialize and open Razorpay Checkout.
 
 ---
 
-# 8. React Payment Button
+## 2. Using `react-razorpay`
+
+Import the hook:
+
+```jsx
+import { useRazorpay } from "react-razorpay";
+```
+
+Example:
 
 ```jsx
 import React from "react";
 import axios from "axios";
+import { useRazorpay } from "react-razorpay";
 
 function PaymentButton() {
+  const { Razorpay } = useRazorpay();
+
   const handlePayment = async () => {
     try {
+      // Create order on backend
       const { data: order } = await axios.post(
         "http://localhost:5000/api/payment/orders",
         {
@@ -340,7 +347,7 @@ function PaymentButton() {
       );
 
       const options = {
-        key: "YOUR_RAZORPAY_KEY_ID",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
 
         amount: order.amount,
 
@@ -352,7 +359,7 @@ function PaymentButton() {
 
         order_id: order.id,
 
-        handler: async function (response) {
+        handler: async (response) => {
           try {
             await axios.post(
               "http://localhost:5000/api/payment/verify",
@@ -381,9 +388,9 @@ function PaymentButton() {
         },
       };
 
-      const razorpay = new window.Razorpay(options);
+      const razorpay = new Razorpay(options);
 
-      razorpay.on("payment.failed", function (response) {
+      razorpay.on("payment.failed", (response) => {
         console.error("Payment failed:", response.error);
 
         alert("Payment failed!");
@@ -406,6 +413,195 @@ export default PaymentButton;
 ```
 
 ---
+
+## 3. Frontend Environment Variable
+
+If you're using Vite, create:
+
+```env
+VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
+```
+
+Then access it using:
+
+```js
+import.meta.env.VITE_RAZORPAY_KEY_ID
+```
+
+### Important
+
+Only the Razorpay **Key ID** belongs on the frontend.
+
+Never expose:
+
+```env
+RAZORPAY_KEY_SECRET
+```
+
+in React.
+
+The secret must remain on the Express backend.
+
+---
+
+## 4. `react-razorpay` vs Razorpay Checkout Script
+
+There are two common ways to integrate Razorpay into a React application.
+
+### Method 1 — Razorpay Checkout Script
+
+```html
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+```
+
+Then:
+
+```js
+const razorpay = new window.Razorpay(options);
+```
+
+### Method 2 — `react-razorpay`
+
+Install:
+
+```bash
+npm install react-razorpay
+```
+
+Then:
+
+```jsx
+import { useRazorpay } from "react-razorpay";
+
+const { Razorpay } = useRazorpay();
+
+const razorpay = new Razorpay(options);
+
+razorpay.open();
+```
+
+### Which one should you use?
+
+For a React application, `react-razorpay` provides a cleaner React-oriented integration.
+
+For a plain HTML/JavaScript application, the Razorpay Checkout script is sufficient.
+
+---
+
+## 5. Complete Architecture With React Razorpay
+
+```text
+React
+  │
+  │ POST /api/payment/orders
+  ▼
+Express.js
+  │
+  │ Create Order
+  ▼
+Razorpay API
+  │
+  │ Order ID
+  ▼
+Express.js
+  │
+  │ Return Order
+  ▼
+React
+  │
+  │ react-razorpay
+  ▼
+Razorpay Checkout
+  │
+  │ Customer Payment
+  ▼
+Razorpay
+  │
+  │ Payment ID
+  │ Signature
+  ▼
+React
+  │
+  │ Send payment details
+  ▼
+Express.js
+  │
+  │ Verify Signature
+  ▼
+MongoDB
+  │
+  ▼
+Payment Completed
+```
+
+---
+
+## 6. Important Note About `react-razorpay`
+
+`react-razorpay` does **not** replace your backend payment logic.
+
+It mainly provides a React-friendly interface for opening Razorpay Checkout.
+
+You still need your Express backend to:
+
+* Create Razorpay orders
+* Keep the Razorpay secret key secure
+* Verify payment signatures
+* Store payment information
+* Handle webhooks
+* Handle refunds
+* Validate the actual order amount
+
+The secure architecture remains:
+
+```text
+React
+   ↓
+Express Backend
+   ↓
+Razorpay API
+```
+
+not:
+
+```text
+React
+   ↓
+Razorpay Secret Key
+```
+
+---
+
+## 7. Recommended React Payment Flow
+
+```text
+User clicks "Pay Now"
+        ↓
+React calls backend
+        ↓
+Backend calculates actual amount
+        ↓
+Backend creates Razorpay Order
+        ↓
+Backend returns Order ID
+        ↓
+React initializes react-razorpay
+        ↓
+Razorpay Checkout opens
+        ↓
+User completes payment
+        ↓
+Razorpay returns payment details
+        ↓
+React sends details to backend
+        ↓
+Backend verifies signature
+        ↓
+Payment saved/updated in MongoDB
+        ↓
+Order fulfilled
+```
+
 
 # 9. Verify Payment Signature
 
