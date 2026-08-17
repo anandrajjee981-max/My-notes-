@@ -1,9 +1,6 @@
 # 🐳 Docker Complete Guide — Cheat Sheet + Compose Dev Setup
 
 
-
----
-
 ## 📚 Table of Contents
 
 1. [Need to Know Docker Commands](#1-need-to-know-docker-commands)
@@ -18,6 +15,7 @@
 10. [When Do You Actually Need to Rebuild?](#10-when-do-you-actually-need-to-rebuild)
 11. [Common Mistakes (aur unke fix)](#11-common-mistakes-aur-unke-fix)
 12. [Concept Diagrams](#12-concept-diagrams)
+12.5. [Beyond Basics — What a DevOps Engineer Should Know](#125-beyond-basics--what-a-devops-engineer-should-know)
 13. [Interview Questions (Docker + Compose)](#13-interview-questions-docker--compose)
 14. [Final Takeaway](#14-final-takeaway)
 
@@ -190,7 +188,11 @@ Volumes are Docker's way of surviving container deletion — data outside the co
 | Good for **live code sync** in dev | Good for **persistent data** (DB, uploads) |
 | Changes reflect instantly both ways | Isolated, portable, backup-friendly |
 
-**Typical dev setup — bind mount + anonymous volume trick (avoid node_modules overwrite):**
+**Typical dev setup — bind mount + volume trick (avoid node_modules overwrite):**
+
+There are **two ways** to do this. Both stop your bind mount from wiping out the container's installed `node_modules` — they just differ in whether the volume has a name.
+
+**Option A — Anonymous volume (no name given):**
 ```yaml
 services:
   app:
@@ -199,8 +201,53 @@ services:
       - ./server:/app          # bind mount source code for live reload
       - /app/node_modules      # anonymous volume — protects container's own node_modules
 ```
+Docker auto-generates a random hash ID for this volume (visible as gibberish in `docker volume ls`). Quick to write, harder to track/clean up.
 
-**Why this matters:** without the second line, your host's `node_modules` (or missing folder) would overwrite the container's installed dependencies, breaking the app.
+**Option B — Named volume (recommended, production-grade dev setup):**
+```yaml
+services:
+  backend:
+    build: ./server              # build image from server/Dockerfile
+    ports:
+      - "5000:5000"               # HOST:CONTAINER
+    volumes:
+      - ./server:/app                       # bind mount: your code → container
+      - backend-node-modules:/app/node_modules  # named volume: protect deps
+    environment:
+      - MONGO_URI=your_atlas_uri
+      - PORT=5000
+    command: npm run dev                    # overrides Dockerfile CMD (nodemon)
+
+  frontend:
+    build: ./client
+    ports:
+      - "3000:5173"                         # host 3000 → vite's 5173
+    volumes:
+      - ./client:/app
+      - frontend-node-modules:/app/node_modules
+    command: npm run dev -- --host          # --host exposes vite outside container
+
+# All named volumes must be declared here
+volumes:
+  backend-node-modules:
+  frontend-node-modules:
+```
+Here `backend-node-modules` and `frontend-node-modules` are explicit names you choose, declared under the top-level `volumes:` key. Docker tracks them by that readable name (`docker volume ls` shows `backend-node-modules`, not a hash) — and each service gets its **own isolated volume** so backend and frontend deps never mix.
+
+**Why this matters (both options):** without that second line, your host's `node_modules` (or a missing folder on host) would overwrite the container's installed dependencies at `/app/node_modules`, breaking the app. Docker's mount-overlap rule (more specific/longer path wins) is what lets the volume "win" over the bind mount for that one subfolder.
+
+| | Anonymous (`- /app/node_modules`) | Named (`backend-node-modules:/app/node_modules`) |
+|---|---|---|
+| Naming | Docker generates a random hash | You choose the name |
+| Tracking in `docker volume ls` | Hard to identify | Clear, readable |
+| Reuse across rebuilds | Can spawn a new volume each recreate if inconsistent | Same name = same volume reliably reused |
+| Cleanup | Prone to becoming a dangling/orphaned volume | Explicitly manageable (`docker volume rm backend-node-modules`) |
+| Best for | Quick, throwaway setups | Real dev environments with multiple services (e.g. backend + frontend) |
+
+**Extra details from the named-volume example above:**
+- `command: npm run dev` overrides the Dockerfile's `CMD`, so nodemon/dev mode runs instead of a production start command.
+- `command: npm run dev -- --host` on the frontend — Vite binds to `localhost` inside the container by default; `--host` binds it to `0.0.0.0` so it's reachable from outside the container.
+- `"3000:5173"` maps host port 3000 to Vite's default dev port 5173 inside the container.
 
 **Named volume for DB persistence:**
 ```yaml
@@ -318,6 +365,149 @@ Edit code (host) → bind mount syncs → container hot-reloads
 
 ---
 
+## 12.5 Beyond Basics — What a DevOps Engineer Should Know
+
+Sab kuch upar tak **dev workflow** level tha (build/run/compose/volumes). Production/DevOps role mein iske aage ye sab bhi pata hona chahiye:
+
+### A. Multi-stage builds (image size + security)
+Ek hi Dockerfile mein multiple `FROM` stages — build stage bhaari hota hai (compilers, dev deps), final stage sirf runtime + built output leta hai. Final image chhota aur secure banta hai kyunki source code/dev-deps final image mein jaate hi nahi.
+```dockerfile
+# Stage 1: build
+FROM node:18 AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: production
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+CMD ["node", "dist/server.js"]
+```
+
+### B. `.dockerignore`
+`.gitignore` jaisa hi, par build context ke liye. Isse `node_modules`, `.env`, `.git`, logs wagera build ke andar copy hi nahi hote — build fast hota hai, image chhota aur secrets leak nahi hote.
+```
+node_modules
+.env
+.git
+*.log
+Dockerfile
+```
+
+### C. Non-root user (security)
+Default container root user pe chalta hai — agar container compromise ho toh attacker ko root access mil jata hai. Production Dockerfile mein non-root user banana best practice hai:
+```dockerfile
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+```
+
+### D. Restart policies
+Container crash ho jaaye toh kya kare — production mein zaroori hai:
+```yaml
+services:
+  app:
+    restart: unless-stopped   # options: no, always, on-failure, unless-stopped
+```
+
+### E. Healthchecks
+Docker/orchestrator ko batana ki container "running" hai matlab wo "healthy/ready" bhi hai:
+```yaml
+services:
+  app:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+```
+Ye `depends_on` ki limitation (start order only, readiness nahi) ko fix karta hai — Compose v3.4+ mein `depends_on: { condition: service_healthy }` use kar sakte ho.
+
+### F. Resource limits
+Container ko unlimited CPU/RAM lene se rokna — production stability ke liye critical:
+```yaml
+services:
+  app:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+```
+
+### G. Environment-specific compose files
+Dev aur prod ke liye alag configs, base file + override merge hota hai:
+```
+docker-compose.yml           # base config
+docker-compose.override.yml  # auto-merged in dev (bind mounts, hot reload)
+docker-compose.prod.yml      # explicit: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+```
+
+### H. Secrets management
+`environment:` mein plaintext secrets daalna production mein bad practice hai (image layers/logs mein leak ho sakte hain). Better:
+- `env_file:` (still not ideal for real secrets)
+- Docker Secrets (Swarm) / Kubernetes Secrets
+- External secret managers (AWS Secrets Manager, HashiCorp Vault) injected at runtime
+
+### I. Image tagging & registries
+- Kabhi bhi `latest` tag production mein use mat karo — deploy ka exact version untraceable ho jata hai
+- Semantic/commit-based tags use karo: `myapp:v1.2.3`, `myapp:git-sha-abc123`
+- Private registries: Docker Hub (private repo), AWS ECR, GCP Artifact Registry, GitHub Container Registry (GHCR)
+
+### J. Image vulnerability scanning
+Production images ko deploy se pehle scan karna chahiye known CVEs ke liye:
+```bash
+docker scout cves myapp:latest      # Docker's built-in scanner
+trivy image myapp:latest            # popular open-source scanner
+```
+
+### K. Logging & signal handling
+- Container logs by default `docker logs` mein jaate hain via **logging drivers** (`json-file`, `syslog`, `fluentd`, `awslogs`) — production mein centralized logging (ELK, CloudWatch, Datadog) ke liye configure karte hain
+- **PID 1 problem**: container ke main process ko OS signals (SIGTERM on `docker stop`) properly handle karne chahiye, warna graceful shutdown nahi hota. Fix: `tini` init system use karo ya app khud signals handle kare.
+
+### L. Cleanup / housekeeping
+```bash
+docker system prune -a         # remove unused images, containers, networks
+docker volume prune            # remove unused volumes
+docker image prune -a --filter "until=24h"   # remove old unused images
+```
+
+### M. CI/CD integration
+Typical pipeline flow:
+```
+git push → CI builds image (docker build) → tags it → pushes to registry
+        → CD pulls image on server/cluster → docker-compose up -d / kubectl apply
+```
+Key idea: **image built once in CI, same image promoted through dev → staging → prod** (never rebuilt per environment) — this is what makes Docker reliable for deployments.
+
+### N. Beyond Compose — orchestration
+Compose is single-host only. For multi-host/production scale:
+
+| Tool | Use case |
+|---|---|
+| **Docker Compose** | Local dev, single-host small deployments |
+| **Docker Swarm** | Simple multi-host orchestration, built into Docker |
+| **Kubernetes (K8s)** | Industry-standard for production orchestration — auto-scaling, self-healing, rolling updates, service discovery |
+
+Concepts that map from Compose → Kubernetes:
+- `services:` → K8s **Deployments** + **Services**
+- `volumes:` → K8s **PersistentVolumes**
+- `environment:` → K8s **ConfigMaps/Secrets**
+- `docker-compose up` → `kubectl apply -f`
+
+### O. Docker networking (deeper)
+| Driver | Use case |
+|---|---|
+| `bridge` (default) | Single-host container-to-container communication |
+| `host` | Container shares host's network directly (no isolation, faster) |
+| `overlay` | Multi-host networking (Swarm/K8s) |
+| `none` | No networking (fully isolated) |
+
+---
+
 ## 13. Interview Questions (Docker + Compose)
 
 **Basics**
@@ -354,6 +544,21 @@ Edit code (host) → bind mount syncs → container hot-reloads
 21. Your container keeps restarting in a loop — how do you debug it?
 22. You changed a package.json but `npm install` inside container isn't reflecting — why, and how do you fix it?
 23. How would you set up a MERN stack (React + Node + MongoDB) entirely with Docker Compose for local dev?
+
+**DevOps / Production-level**
+24. What is a multi-stage build and why does it reduce final image size?
+25. Why should you avoid using the `latest` tag in production deployments?
+26. How do you handle secrets in Docker without hardcoding them in the Dockerfile or image?
+27. What's the "PID 1 problem" in containers, and how do you solve it?
+28. Difference between `docker-compose.yml`, `docker-compose.override.yml`, and a prod-specific compose file — how do they merge?
+29. How would you set up a healthcheck for a service, and how is it different from `depends_on`?
+30. What's the difference between Docker Swarm and Kubernetes? When would you pick one over the other?
+31. How do you scan a Docker image for vulnerabilities before deploying it?
+32. What are Docker logging drivers, and how would you send container logs to a centralized system (e.g. CloudWatch/ELK)?
+33. Explain a typical CI/CD flow using Docker — where is the image built, and how does it move through environments?
+34. Why do we run containers as a non-root user in production?
+35. What's the difference between `bridge`, `host`, and `overlay` network drivers?
+36. How do you limit CPU/memory usage for a container, and why does it matter in production?
 
 ---
 
