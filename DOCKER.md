@@ -1,5 +1,6 @@
 # 🐳 Docker Complete Guide — Cheat Sheet + Compose Dev Setup
 
+---
 
 ## 📚 Table of Contents
 
@@ -8,6 +9,7 @@
 3. [Key Concepts Explained](#3-key-concepts-explained)
 4. [Essential Dockerfile Instructions](#4-essential-dockerfile-instructions)
 5. [Project Structure (MERN-style)](#5-project-structure-mern-style)
+5.5. [Frontend Dockerfile + API Proxy Setup (Dev Mode)](#55-frontend-dockerfile--api-proxy-setup-dev-mode)
 6. [Docker Compose File — Full Breakdown](#6-docker-compose-file--full-breakdown)
 7. [Volumes Deep Dive](#7-volumes-deep-dive)
 8. [Adding New npm Packages (Container Workflow)](#8-adding-new-npm-packages-container-workflow)
@@ -83,7 +85,7 @@ docker rmi my-node-app
 
 | Instruction | Description | Example |
 |---|---|---|
-| `FROM <image>` | Base image, starting point | `FROM node:16-alpine` |
+| `FROM <image>` | Base image, starting point | `FROM node:20-alpine` |
 | `RUN <command>` | Executes commands during build (install packages) | `RUN apt-get update && apt-get install -y python3` |
 | `COPY <src> <dest>` | Copies files from host → container | `COPY . /app` |
 | `WORKDIR <path>` | Sets working directory for later instructions | `WORKDIR /app` |
@@ -91,11 +93,11 @@ docker rmi my-node-app
 | `CMD ["exe","p1","p2"]` | Default command when container starts (only last CMD wins if multiple) | `CMD ["node","server.js"]` |
 | `ENTRYPOINT ["exe","p1"]` | Like CMD but not easily overridden by `docker run` args | `ENTRYPOINT ["/app/start-script.sh"]` |
 | `ENV <key> <value>` | Sets env variable inside container | `ENV NODE_ENV production` |
-| `ARG <var>=<default>` | Build-time variable (passed via `--build-arg`) | `ARG NODE_VERSION=16` |
+| `ARG <var>=<default>` | Build-time variable (passed via `--build-arg`) | `ARG NODE_VERSION=20` |
 
 **Sample Dockerfile (Node.js app):**
 ```dockerfile
-FROM node:16-alpine
+FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -120,6 +122,96 @@ project-root/
 ```
 
 Each service (client, server, db) has its own **Dockerfile**. `docker-compose.yml` orchestrates all of them together — networks, ports, volumes, env vars.
+
+---
+
+## 5.5 Frontend Dockerfile + API Proxy Setup (Dev Mode)
+
+Frontend ka Dockerfile backend se thoda different hota hai kyunki Vite dev server hai, aur frontend ko backend API tak pahunchne ka rasta chahiye hota hai — ye rasta hi "proxy" kehlata hai. **Nginx abhi skip kar** — wo production-deploy ke time seekhna, abhi jo tu daily dev mein use karega wo hai **Vite ka apna built-in proxy**.
+
+### A. Dev-mode frontend Dockerfile
+```dockerfile
+# client/Dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host"]
+```
+Ye Vite ka dev server chalata hai (hot reload ke sath) — isko hi tune compose mein `command: npm run dev -- --host` se override kiya tha. `--host` zaroori hai warna Vite sirf container ke andar hi bind hoga, tere host browser se accessible nahi hoga.
+
+### B. Problem: frontend se backend API kaise call kare?
+
+Compose mein frontend aur backend **do alag containers** hain, do alag ports pe (`5173` aur `5000`). Agar frontend se seedha `fetch('http://localhost:5000/api/users')` maaroge, ye kabhi kabhi kaam karega, kabhi CORS error dega — kyunki browser ki nazar mein ye do alag "origins" hain.
+
+### C. Solution: Vite Proxy (`vite.config.js`)
+
+Vite khud ek proxy feature deta hai — dev server ke andar hi ek rule likh dete hain ki `/api` se shuru hone wali koi bhi request automatically backend tak forward ho jaaye:
+
+```js
+// client/vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: true,              // same as --host flag, allows access from outside container
+    proxy: {
+      '/api': {
+        target: 'http://backend:5000',   // 'backend' = docker-compose service name
+        changeOrigin: true,
+        // secure: false,   // uncomment only if backend uses self-signed HTTPS cert
+      },
+    },
+  },
+})
+```
+
+**Ab tera frontend code mein:**
+```js
+// pehle (CORS issue prone):
+fetch('http://localhost:5000/api/users')
+
+// ab (Vite proxy ke through):
+fetch('/api/users')
+```
+Bas `/api/users` likho — Vite dev server khud detect karega ki ye `/api` se start ho raha hai, aur background mein `http://backend:5000/api/users` ko forward kar dega. Browser ko lagta hai request same-origin hai, CORS issue hi nahi aata.
+
+**`target: 'http://backend:5000'` mein `backend` kya hai?**
+Ye tera Docker Compose service ka naam hai (jaisa `MONGO_URI` mein `db` hostname use hota tha). Docker Compose apna internal DNS resolve kar deta hai — `backend` naam se hi us container tak pahunch jaata hai, IP address nahi chahiye.
+
+### D. Full compose setup (dev mode)
+```yaml
+services:
+  backend:
+    build: ./server
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=your_atlas_uri
+
+  frontend:
+    build: ./client
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./client:/app
+      - frontend-node-modules:/app/node_modules
+    command: npm run dev -- --host
+    depends_on:
+      - backend
+
+volumes:
+  frontend-node-modules:
+```
+Vite proxy config (`vite.config.js`) automatically kaam karega jab tu `docker-compose up` chalayega — koi extra container ya extra setup nahi chahiye, bas ek config file.
+
+---
+
+> **Nginx / reverse proxy — abhi ke liye park kar de.** Jab tu production deploy karega (React build ko static files ke roop mein serve karna, aur ek single port se sab kuch expose karna), tab Nginx multi-stage build seekhna padega. Abhi dev stage mein Vite proxy hi kaafi hai, aur yehi industry mein bhi dev-time standard hai. Jab wo stage aayega, main tujhe step-by-step Nginx bhi sikha dunga.
 
 ---
 
@@ -373,7 +465,7 @@ Sab kuch upar tak **dev workflow** level tha (build/run/compose/volumes). Produc
 Ek hi Dockerfile mein multiple `FROM` stages — build stage bhaari hota hai (compilers, dev deps), final stage sirf runtime + built output leta hai. Final image chhota aur secure banta hai kyunki source code/dev-deps final image mein jaate hi nahi.
 ```dockerfile
 # Stage 1: build
-FROM node:18 AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -381,7 +473,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: production
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
@@ -559,6 +651,17 @@ Concepts that map from Compose → Kubernetes:
 34. Why do we run containers as a non-root user in production?
 35. What's the difference between `bridge`, `host`, and `overlay` network drivers?
 36. How do you limit CPU/memory usage for a container, and why does it matter in production?
+
+**Frontend / API Proxy (Dev)**
+37. Why can't the frontend container directly call `http://localhost:5000/api/...` reliably from inside a Compose setup?
+38. How does Vite's `server.proxy` config solve the CORS problem in dev mode?
+39. In `target: 'http://backend:5000'`, why does `backend` work as a hostname instead of an IP address?
+40. What does the `--host` flag do for Vite inside a Docker container, and why is it required?
+
+**Advanced / Future (once you learn Nginx)**
+41. Why does a production frontend setup usually switch from Vite's dev proxy to an Nginx reverse proxy?
+42. What is `try_files $uri $uri/ /index.html` used for in an Nginx config serving a React SPA?
+43. Why should only the frontend's port be exposed to the host in production, with backend using `expose` instead of `ports`?
 
 ---
 
