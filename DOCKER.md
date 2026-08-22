@@ -159,6 +159,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,              // same as --host flag, allows access from outside container
+      watch: {
+      usePolling: true,
+    },
     proxy: {
       '/api': {
         target: 'http://backend:5000',   // 'backend' = docker-compose service name
@@ -308,7 +311,7 @@ services:
     environment:
       - MONGO_URI=your_atlas_uri
       - PORT=5000
-    command: npm run dev                    # overrides Dockerfile CMD (nodemon)
+    command: npx nodemon -L server.js                   # overrides Dockerfile CMD (nodemon)
 
   frontend:
     build: ./client
