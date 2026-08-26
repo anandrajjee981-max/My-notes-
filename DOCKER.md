@@ -142,9 +142,9 @@ CMD ["npm", "run", "dev", "--", "--host"]
 ```
 # Docker Setup Guide — Frontend + Backend
 
-Vite ka dev server **Hot Module Replacement (HMR)** ke saath chalta hai. Docker Compose mein hum `command: npm run dev -- --host` use karke Vite ko container ke bahar se accessible banate hain.
+Vite ka dev server **Hot Module Replacement (HMR)** ke saath chalta hai. Docker Compose mein `command: npm run dev -- --host` use karke Vite ko container ke bahar se accessible banaya jata hai.
 
-> **Note:** `--host` option zaroori hai. Iske bina Vite container ke andar `localhost` par bind ho sakta hai, jisse host machine/browser se application access nahi ho payegi.
+> **Note:** `--host` option zaroori hai. Iske bina Vite container ke andar `localhost` par bind ho sakta hai aur host machine/browser se access nahi ho payega.
 
 ---
 
@@ -155,7 +155,6 @@ project-root/
 ├── client/                    # Frontend (React / Vite)
 │   ├── Dockerfile
 │   ├── package.json
-│   ├── vite.config.js
 │   └── src/
 │
 ├── server/                    # Backend (Node / Express / NestJS)
@@ -163,16 +162,16 @@ project-root/
 │   ├── package.json
 │   └── src/
 │
-├── docker-compose.yml         # Frontend + Backend orchestration
+├── docker-compose.yml
 │
 └── Dockerfile                 # Optional production multi-stage build
 ```
 
 ---
 
-## 🐳 Production Multi-Stage Dockerfile
+# 🐳 Production Multi-Stage Dockerfile
 
-Agar frontend aur backend ko ek production image mein combine karna ho, toh multi-stage Docker build use kiya ja sakta hai.
+Production mein frontend ko build karke uske generated `dist` files ko backend ke `public` folder mein copy kiya ja sakta hai.
 
 ### `Dockerfile`
 
@@ -218,58 +217,117 @@ EXPOSE 3000
 CMD ["node", "server.js"]
 ```
 
-### ⚠️ Important
-
-Upar wale Dockerfile mein paths **`frontend/` aur `backend/`** ke according hain.
-
-Agar actual project structure mein folders **`client/` aur `server/`** hain, toh paths ko accordingly change karna hoga:
-
-```dockerfile
-COPY ./client/package*.json ./
-COPY ./client ./
-```
-
-aur:
-
-```dockerfile
-COPY ./server/package*.json ./
-COPY ./server ./
-```
+> **Important:** Agar project mein folders `client/` aur `server/` hain, toh Dockerfile mein `frontend/` aur `backend/` ki jagah `client/` aur `server/` use karein.
 
 ---
 
-## 🚀 Development Mode
+# 🌐 Serving React/Vite Frontend Through Express
 
-Development ke liye `docker-compose.yml` mein Vite ko host interface par bind karna important hai:
+Production mein agar Express frontend ki built files serve kar raha hai, toh backend mein static files serve karni hongi.
+
+```js
+const express = require("express");
+const path = require("path");
+
+const app = express();
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, "public")));
+
+// Backend API routes
+app.use("/api", apiRoutes);
+
+// React/Vite SPA fallback
+app.get("*name", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.listen(3000, () => {
+    console.log("Server running on port 3000");
+});
+```
+
+## 🔄 Request Flow
+
+```text
+Browser Request
+       │
+       ▼
+Express Server
+       │
+       ├── /api/* ──────────────► Backend API
+       │
+       ├── /assets/* ───────────► Static Frontend Files
+       │
+       └── Other Routes
+                │
+                ▼
+        public/index.html
+                │
+                ▼
+          React Router
+```
+
+### Why is the fallback route required?
+
+React/Vite applications commonly use **client-side routing**.
+
+For example:
+
+```text
+/
+ /login
+ /dashboard
+ /profile
+ /settings
+```
+
+A request to `/dashboard` may not correspond to an actual file on the server.
+
+Therefore Express sends:
+
+```text
+public/index.html
+```
+
+and then **React Router** determines which frontend page should be displayed.
+
+---
+
+# 🚀 Development Mode with Docker Compose
+
+Development environment mein Vite ka HMR use karne ke liye:
+
+### `docker-compose.yml`
 
 ```yaml
 services:
+
   client:
     build:
       context: ./client
+
     command: npm run dev -- --host
+
     ports:
       - "5173:5173"
 
   server:
     build:
       context: ./server
+
     ports:
       - "3000:3000"
 ```
 
-Is setup mein:
+### Development URLs
 
-* **Frontend:** `http://localhost:5173`
-* **Backend:** `http://localhost:3000`
-* Vite HMR enabled rahega.
-* `--host` ki wajah se Vite container ke bahar accessible rahega.
+```text
+Frontend → http://localhost:5173
+Backend  → http://localhost:3000
+```
 
-
-
-
-
-
+> Development mode mein frontend aur backend separate containers mein run kar sakte hain. Express ka `index.html` fallback primarily **production setup** mein required hai jab backend frontend ka built application serve karta hai.
 
 ### B. Problem: frontend se backend API kaise call kare?
 
