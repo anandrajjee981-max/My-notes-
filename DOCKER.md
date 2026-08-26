@@ -140,17 +140,26 @@ COPY . .
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 ```
-Ye Vite ka dev server chalata hai (hot reload ke sath) — isko hi tune compose mein `command: npm run dev -- --host` se override kiya tha. `--host` zaroori hai warna Vite sirf container ke andar hi bind hoga, tere host browser se accessible nahi hoga.
-#######combining both frontend and backend dockerfile after making individual dockerfile for frontend and backend 
+# Docker Setup Guide (Frontend + Backend)
+
+Vite ka dev server Hot Reloading (HMR) ke sath chalata hai. Hum ise `docker-compose.yml` mein `command: npm run dev -- --host` se override karte hain.
+
+> **Note:** `--host` option lagana zaroori hai, warna Vite container ke andar (localhost) par hi bind hoga aur aapke host machine/browser se access nahi ho payega.
+
+---
+
+## 📁 Project Directory Structure
+
+```text
 project-root/
-├── client/                # Frontend (React/Vite)
+├── client/                # Frontend (React / Vite)
 │   ├── Dockerfile
 │   └── src/
-├── server/                # Backend (Node/Express/NestJS)
+├── server/                # Backend (Node / Express / NestJS)
 │   ├── Dockerfile
 │   └── src/
-├── docker-compose.yml     # ties everything together
-├── Dockerfile
+├── docker-compose.yml     # Ties everything together
+└── Dockerfile             # Multi-stage production build (Optional)
 
 ```dockerfile
 # Stage 1: Build Frontend
