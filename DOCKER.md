@@ -141,7 +141,38 @@ EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 ```
 Ye Vite ka dev server chalata hai (hot reload ke sath) — isko hi tune compose mein `command: npm run dev -- --host` se override kiya tha. `--host` zaroori hai warna Vite sirf container ke andar hi bind hoga, tere host browser se accessible nahi hoga.
+#######combining both frontend and backend dockerfile after making individual dockerfile for frontend and backend 
+project-root/
+├── client/                # Frontend (React/Vite)
+│   ├── Dockerfile
+│   └── src/
+├── server/                # Backend (Node/Express/NestJS)
+│   ├── Dockerfile
+│   └── src/
+├── docker-compose.yml     # ties everything together
+├── Dockerfile
 
+```dockerfile
+# Stage 1: Build Frontend
+FROM node:20-alpine AS frontend_builder
+WORKDIR /app
+COPY ./frontend/package*.json ./
+RUN npm install
+COPY ./frontend ./
+RUN npm run build
+
+# Stage 2: Build & Run Backend
+FROM node:20-alpine 
+WORKDIR /app
+COPY ./backend/package*.json ./
+RUN npm install
+COPY ./backend ./
+# Copy built static frontend assets into backend's public directory
+COPY --from=frontend_builder /app/dist ./public
+
+EXPOSE 3000
+CMD [ "node", "server.js" ]
+```
 ### B. Problem: frontend se backend API kaise call kare?
 
 Compose mein frontend aur backend **do alag containers** hain, do alag ports pe (`5173` aur `5000`). Agar frontend se seedha `fetch('http://localhost:5000/api/users')` maaroge, ye kabhi kabhi kaam karega, kabhi CORS error dega — kyunki browser ki nazar mein ye do alag "origins" hain.
