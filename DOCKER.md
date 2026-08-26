@@ -140,11 +140,11 @@ COPY . .
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 ```
-# Docker Setup Guide (Frontend + Backend)
+# Docker Setup Guide — Frontend + Backend
 
-Vite ka dev server Hot Reloading (HMR) ke sath chalata hai. Hum ise `docker-compose.yml` mein `command: npm run dev -- --host` se override karte hain.
+Vite ka dev server **Hot Module Replacement (HMR)** ke saath chalta hai. Docker Compose mein hum `command: npm run dev -- --host` use karke Vite ko container ke bahar se accessible banate hain.
 
-> **Note:** `--host` option lagana zaroori hai, warna Vite container ke andar (localhost) par hi bind hoga aur aapke host machine/browser se access nahi ho payega.
+> **Note:** `--host` option zaroori hai. Iske bina Vite container ke andar `localhost` par bind ho sakta hai, jisse host machine/browser se application access nahi ho payegi.
 
 ---
 
@@ -152,36 +152,125 @@ Vite ka dev server Hot Reloading (HMR) ke sath chalata hai. Hum ise `docker-comp
 
 ```text
 project-root/
-├── client/                # Frontend (React / Vite)
+├── client/                    # Frontend (React / Vite)
 │   ├── Dockerfile
+│   ├── package.json
+│   ├── vite.config.js
 │   └── src/
-├── server/                # Backend (Node / Express / NestJS)
+│
+├── server/                    # Backend (Node / Express / NestJS)
 │   ├── Dockerfile
+│   ├── package.json
 │   └── src/
-├── docker-compose.yml     # Ties everything together
-└── Dockerfile             # Multi-stage production build (Optional)
+│
+├── docker-compose.yml         # Frontend + Backend orchestration
+│
+└── Dockerfile                 # Optional production multi-stage build
+```
+
+---
+
+## 🐳 Production Multi-Stage Dockerfile
+
+Agar frontend aur backend ko ek production image mein combine karna ho, toh multi-stage Docker build use kiya ja sakta hai.
+
+### `Dockerfile`
 
 ```dockerfile
+# ==========================================
 # Stage 1: Build Frontend
+# ==========================================
+
 FROM node:20-alpine AS frontend_builder
-WORKDIR /app
+
+WORKDIR /app/frontend
+
 COPY ./frontend/package*.json ./
+
 RUN npm install
+
 COPY ./frontend ./
+
 RUN npm run build
 
+
+# ==========================================
 # Stage 2: Build & Run Backend
-FROM node:20-alpine 
+# ==========================================
+
+FROM node:20-alpine
+
 WORKDIR /app
+
 COPY ./backend/package*.json ./
+
 RUN npm install
+
 COPY ./backend ./
-# Copy built static frontend assets into backend's public directory
-COPY --from=frontend_builder /app/dist ./public
+
+# Copy frontend production build
+# into backend's public directory
+
+COPY --from=frontend_builder /app/frontend/dist ./public
 
 EXPOSE 3000
-CMD [ "node", "server.js" ]
+
+CMD ["node", "server.js"]
 ```
+
+### ⚠️ Important
+
+Upar wale Dockerfile mein paths **`frontend/` aur `backend/`** ke according hain.
+
+Agar actual project structure mein folders **`client/` aur `server/`** hain, toh paths ko accordingly change karna hoga:
+
+```dockerfile
+COPY ./client/package*.json ./
+COPY ./client ./
+```
+
+aur:
+
+```dockerfile
+COPY ./server/package*.json ./
+COPY ./server ./
+```
+
+---
+
+## 🚀 Development Mode
+
+Development ke liye `docker-compose.yml` mein Vite ko host interface par bind karna important hai:
+
+```yaml
+services:
+  client:
+    build:
+      context: ./client
+    command: npm run dev -- --host
+    ports:
+      - "5173:5173"
+
+  server:
+    build:
+      context: ./server
+    ports:
+      - "3000:3000"
+```
+
+Is setup mein:
+
+* **Frontend:** `http://localhost:5173`
+* **Backend:** `http://localhost:3000`
+* Vite HMR enabled rahega.
+* `--host` ki wajah se Vite container ke bahar accessible rahega.
+
+
+
+
+
+
+
 ### B. Problem: frontend se backend API kaise call kare?
 
 Compose mein frontend aur backend **do alag containers** hain, do alag ports pe (`5173` aur `5000`). Agar frontend se seedha `fetch('http://localhost:5000/api/users')` maaroge, ye kabhi kabhi kaam karega, kabhi CORS error dega — kyunki browser ki nazar mein ye do alag "origins" hain.
