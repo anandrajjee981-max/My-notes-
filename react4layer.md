@@ -29,25 +29,35 @@ Iska sirf ek kaam hai: **backend se baat karna**. Is layer ko koi Redux nahi pat
 
 ```js
 // auth/service/auth.api.js
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api/auth',
+  withCredentials: true,
+});
 
 export async function login(email, password) {
-  const res = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error('Login failed');
-  return res.json(); // { user, token }
+  const res = await api.post('/login', { email, password });
+  return res.data; // { user, token }
+}
+
+export async function register(email, password, role, phonenumber, username) {
+  const res = await api.post('/register', { email, password, role, phonenumber, username });
+  return res.data;
 }
 
 export async function getme() {
-  const res = await fetch('/api/auth/me', { credentials: 'include' });
-  if (!res.ok) throw new Error('Not authenticated');
-  return res.json();
+  const res = await api.get('/me');
+  return res.data;
+}
+
+export async function verifyGoogleAuthToken(tokenData, role) {
+  const res = await api.post('/google', { tokenData, role });
+  return res.data;
 }
 ```
 
-**Rule:** is layer mein koi `dispatch` nahi hota, koi `useState` nahi hota, koi React import nahi hota. Pure JS functions. Agar kal backend ka URL badal jaaye ya `axios` pe switch karna ho, sirf isi file mein change hoga — baaki poora app untouched rahega.
+**Rule:** is layer mein koi `dispatch` nahi hota, koi `useState` nahi hota, koi React import nahi hota. Pure JS functions jo axios use karte hain. Agar kal backend ka URL badal jaaye ya kisi aur HTTP client pe switch karna ho, sirf isi file mein change hoga — baaki poora app untouched rahega. Axios ka fayda yeh hai ki error handling automatic hai (non-2xx response pe khud hi throw karta hai), isliye tumhare hook mein jo `try/catch` hai woh directly axios ke error ko catch kar leta hai — `res.ok` jaisa manual check nahi karna padta.
 
 ---
 
