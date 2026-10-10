@@ -1,176 +1,337 @@
-# Kubernetes on Your Local Machine — Complete Notes
+# Kubernetes on Local Machine — Complete Guide 
 
-**Local Setup · Docker Desktop · MERN Stack · nginx Ingress**
-*Sheryians Coding School*
+**Docker Desktop · MERN Stack · nginx Ingress**
 
-A complete guide to understanding and running Kubernetes locally using Docker Desktop. Covers every core component with examples from a real MERN stack project, plus config, probes, storage, debugging, autoscaling, and tooling.
+
+---
+
+## Ye guide kaise padhni hai
+
+Is guide ka flow ek hi kahani follow karta hai:
+
+```
+Problem kya hai?  →  K8s ka mental model  →  Setup  →  Pod  →  Deployment  →  Service
+   →  (Checkpoint 1: app chalao)  →  Ingress  →  (Checkpoint 2: browser se kholo)
+   →  Config + Secrets  →  Probes + Rolling update + Storage
+   →  Poora MERN stack  →  Debug + Scaling  →  Extras
+```
+
+Har chapter ek hi template follow karta hai, taaki tumhe pata rahe kahan kya milega:
+
+| Section | Matlab |
+|---|---|
+| **Ek line me** | Chapter ka nichod, 10 second me |
+| **Kyun chahiye** | Is cheez ke bina kya problem aati hai |
+| **Kaise kaam karta hai** | Concept + diagram |
+| **Hands-on** | Seedha chalane wala YAML / commands |
+| **Galtiyan** | Jahan log aksar atakte hain |
+| **Yaad rakho** | Chapter ka summary |
+
+**Running example:** poori guide me ek hi app use hoti hai — ek **Express backend** jiska Docker image `express-k8s:latest` hai, port **3000** par chalta hai. Aage chal ke isme MongoDB, Redis aur React frontend jod denge.
 
 ---
 
 ## Table of Contents
 
-**Overview**
-- [00. What is Kubernetes?](#00-what-is-kubernetes)
-- [01. Architecture](#01-architecture)
+**Part 1 — Samajh**
+- [1. Kubernetes kya hai aur kyun](#1-kubernetes-kya-hai-aur-kyun)
+- [2. Architecture: andar kya chal raha hai](#2-architecture-andar-kya-chal-raha-hai)
 
-**Core Components**
-- [02. Pod](#02-pod)
-- [03. Deployment](#03-deployment)
-- [04. ReplicaSet](#04-replicaset)
-- [05. Service](#05-service)
-- [06. Ingress](#06-ingress)
-- [07. Ingress Controller](#07-ingress-controller)
+**Part 2 — Setup**
+- [3. Docker Desktop me Kubernetes enable karo](#3-docker-desktop-me-kubernetes-enable-karo)
+- [4. YAML likhna seekho](#4-yaml-likhna-seekho)
 
-**Setup**
-- [08. Enable Kubernetes on Docker Desktop](#08-enable-kubernetes-on-docker-desktop)
-- [09. Writing YAML Files](#09-writing-yaml-files)
-- [10. Labels & Selectors](#10-labels--selectors)
+**Part 3 — Core Building Blocks**
+- [5. Pod](#5-pod)
+- [6. Deployment (aur uske andar ReplicaSet)](#6-deployment-aur-uske-andar-replicaset)
+- [7. Labels aur Selectors](#7-labels-aur-selectors)
+- [8. Service](#8-service)
+- [Checkpoint 1: App deploy karke chalao](#checkpoint-1-app-deploy-karke-chalao)
 
-**Configuration & Reliability**
+**Part 4 — Bahar se Traffic**
+- [9. Ingress Controller](#9-ingress-controller)
+- [10. Ingress](#10-ingress)
+- [Checkpoint 2: Browser se kholo](#checkpoint-2-browser-se-kholo)
+
+**Part 5 — Configuration**
 - [11. Namespaces](#11-namespaces)
 - [12. ConfigMap](#12-configmap)
-- [13. Secrets (Local)](#13-secrets-local)
+- [13. Secrets](#13-secrets)
+
+**Part 6 — Reliability**
 - [14. Health Probes](#14-health-probes)
-- [15. Rolling Updates & Rollbacks](#15-rolling-updates--rollbacks)
-- [16. Volumes & Persistent Storage](#16-volumes--persistent-storage)
+- [15. Rolling Updates aur Rollback](#15-rolling-updates-aur-rollback)
+- [16. Volumes aur Persistent Storage](#16-volumes-aur-persistent-storage)
 
-**Run & Debug**
-- [17. Deploy Your App](#17-deploy-your-app)
-- [18. Full MERN Stack on Local Kubernetes](#18-full-mern-stack-on-local-kubernetes)
-- [19. kubectl Essentials & Port-Forward](#19-kubectl-essentials--port-forward)
-- [20. Debug Commands & Troubleshooting](#20-debug-commands--troubleshooting)
-- [21. Autoscaling (HPA)](#21-autoscaling-hpa)
+**Part 7 — Real Project**
+- [17. Poora MERN stack Kubernetes par](#17-poora-mern-stack-kubernetes-par)
 
-**Beyond the Basics**
-- [22. Other Workload Types](#22-other-workload-types)
-- [23. Helm & Kustomize](#23-helm--kustomize)
-- [24. Handy Tools](#24-handy-tools)
-- [25. Cleanup & Reset](#25-cleanup--reset)
-- [26. From Local to EKS](#26-from-local-to-eks)
-- [27. Best Practices Checklist](#27-best-practices-checklist)
+**Part 8 — Operate karna**
+- [18. kubectl daily use](#18-kubectl-daily-use)
+- [19. Debugging aur Troubleshooting](#19-debugging-aur-troubleshooting)
+- [20. Autoscaling (HPA)](#20-autoscaling-hpa)
+
+**Part 9 — Extras**
+- [21. Dusre Workload types](#21-dusre-workload-types)
+- [22. Helm aur Kustomize](#22-helm-aur-kustomize)
+- [23. Useful Tools](#23-useful-tools)
+- [24. Cleanup aur Reset](#24-cleanup-aur-reset)
+- [25. Local se EKS tak](#25-local-se-eks-tak)
+- [26. Best Practices Checklist](#26-best-practices-checklist)
+- [Quick Reference Card](#quick-reference-card)
 
 ---
 
-## 00. What is Kubernetes?
+# PART 1 — SAMAJH
 
-> **Core Concept** — **Kubernetes (K8s)** is a container orchestration system. It manages how your Docker containers run — making sure the right number are running, restarting them when they crash, routing traffic between them, and scaling them up when load increases. You describe what you want in YAML files and Kubernetes makes it happen.
+## 1. Kubernetes kya hai aur kyun
 
-### Without vs With Kubernetes
+> **Ek line me:** Kubernetes ek **container manager** hai. Tum bolte ho "mujhe meri app ki 3 copies chahiye", aur wo hamesha 3 copies chalti rakhta hai — crash ho to restart, load badhe to scale, naya version aaye to bina downtime ke update.
 
-| Situation | Without Kubernetes | With Kubernetes |
+### Kyun chahiye
+
+Maan lo tumne Express app ka Docker container bana liya. Local par `docker run` se sab theek hai. Ab production socho:
+
+- Container raat 3 baje crash ho gaya → **kaun restart karega?**
+- Traffic 10x ho gaya → **kaun naye containers chalayega?**
+- Naya version deploy karna hai → **users ko downtime kyun mile?**
+- 5 services hain (frontend, backend, auth, mongo, redis) → **ek dusre ko kaise dhundhenge?** IP har restart par badal jata hai.
+
+Ye sab kaam manually karna painful hai. Kubernetes (short: **K8s**) ye sab automatically karta hai.
+
+### Kubernetes ke bina vs saath
+
+| Situation | Bina Kubernetes | Kubernetes ke saath |
 |---|---|---|
-| Container crashes | App goes down, manual restart needed | Kubernetes restarts it automatically |
-| Traffic spike | App slows down or crashes | HPA adds more containers automatically |
-| Multiple services | Manual ports, complex networking | Internal DNS — services talk by name |
-| Deploy new version | Downtime during update | Rolling update — zero downtime |
-| Multiple replicas | Manage each container manually | Set `replicas: 3` and Kubernetes handles the rest |
+| Container crash | App down, manual restart | Automatically restart |
+| Traffic spike | App slow ya crash | HPA aur containers add karta hai |
+| Multiple services | Manual ports, complex networking | Internal DNS — services naam se baat karti hain |
+| Naya version deploy | Downtime | Rolling update — zero downtime |
+| Multiple copies | Har container manually manage | `replicas: 3` likho, baaki K8s sambhalta hai |
 
-### Declarative model (the big idea)
+### Is guide me aane wale key terms (pehle se jaan lo)
 
-You never say *"start a container"*. You say *"I want 3 copies of this app running"* (desired state). Kubernetes constantly compares **desired state** with **actual state** and fixes any difference. This loop is called **reconciliation**.
-
-```
-You write YAML (desired state)  →  API Server stores it in etcd
-                                         ↓
-Controllers watch: actual state ≠ desired state?
-                                         ↓
-Fix it: create / delete / restart pods
-```
-
-### Key Terms at a glance
-
-| Term | Simple meaning |
+| Term | Aasan matlab |
 |---|---|
-| **Pod** | Smallest unit. One or more containers running together. |
-| **Deployment** | Manages pods — keeps them running, handles updates and rollbacks. |
-| **ReplicaSet** | Keeps N identical pods alive. Created by a Deployment. |
-| **Service** | Stable network endpoint that finds pods using labels and routes traffic to them. |
-| **Ingress** | HTTP routing rules — which domain/path goes to which service. |
-| **Ingress Controller** | The actual pod (nginx) that reads Ingress rules and routes real traffic. |
-| **Namespace** | Virtual cluster inside a cluster. Used to separate environments. |
-| **ConfigMap** | Store non-secret config (env variables) separately from your image. |
-| **Secret** | Store sensitive config (passwords, tokens) encoded in the cluster. |
-| **Volume / PVC** | Storage that can outlive a pod (needed for databases). |
-| **HPA** | Automatically scales pod count based on CPU/memory. |
-| **Node** | A machine (VM or physical) that runs pods. On Docker Desktop: one node. |
-| **Cluster** | Control plane + all nodes together. |
+| **Pod** | Sabse chhoti unit. Ek (ya zyada) container ka wrapper. |
+| **Deployment** | Pods ka manager — chalu rakhta hai, update aur rollback karta hai. |
+| **ReplicaSet** | "N pods hamesha zinda rahein" ki guarantee deta hai. Deployment ke andar hota hai. |
+| **Service** | Pods tak pahunchne ka **stable address**. |
+| **Ingress** | HTTP routing rules — kaunsa domain/path kis service par jaye. |
+| **Ingress Controller** | Wo nginx pod jo Ingress rules padh kar asli traffic route karta hai. |
+| **Namespace** | Cluster ke andar virtual cluster. Environments alag karne ke liye. |
+| **ConfigMap** | Non-secret config (env variables). |
+| **Secret** | Sensitive config (password, token). |
+| **Volume / PVC** | Storage jo pod ke baad bhi bacha rahe (database ke liye). |
+| **HPA** | Load ke hisaab se pods automatically badhata/ghatata hai. |
+| **Node** | Machine (VM/physical) jis par pods chalte hain. Docker Desktop me 1 node. |
+| **Cluster** | Control plane + saare nodes. |
+
+### Sabse zaroori idea: Declarative model
+
+Tum K8s ko **order nahi dete** ("container start karo"). Tum **desired state batate ho** ("mujhe 3 copies chahiye"). K8s lagatar dekhta rehta hai ki **actual state = desired state** hai ya nahi. Fark mile to khud theek kar deta hai. Is loop ko **reconciliation** kehte hain.
+
+```
+Tum YAML likhte ho (desired state: "3 pods chahiye")
+        ↓
+API Server use etcd me store karta hai
+        ↓
+Controllers dekhte rehte hain: actual ≠ desired ?
+        ↓
+Fark mila → pod create / delete / restart
+```
+
+> **Analogy:** Restaurant ka manager. Tum bolte ho "hamesha 3 chef kitchen me rahne chahiye." Ek chef chhutti le le to manager turant naya bulata hai. Tumhe har baar bolna nahi padta.
+
+### Yaad rakho
+- K8s = containers ka automatic manager.
+- Tum **kya chahiye** likhte ho (YAML), K8s **kaise karna hai** khud dekhta hai.
+- Self-healing, scaling, rolling updates, service discovery — ye 4 sabse bade fayde.
 
 ---
 
-## 01. Architecture
+## 2. Architecture: andar kya chal raha hai
 
-> **Key Concept** — A Kubernetes cluster has two parts: the **Control Plane** (the brain — decides what runs where) and **Worker Nodes** (the muscle — where your pods actually run). On Docker Desktop both live on your local machine, inside a single node called `docker-desktop`.
+> **Ek line me:** Cluster = **Control Plane** (dimaag, decide karta hai) + **Worker Nodes** (haath-pair, jahan pods chalte hain). Docker Desktop me dono tumhari ek machine par, ek node `docker-desktop` me hote hain.
 
-### Full traffic flow
-
-```
-Browser / Client
-   │  HTTP request to express.local or localhost
-   ▼
-Ingress Controller (nginx pod)
-   │  Receives traffic. Reads Ingress rules to decide where to send it.
-   ▼
-Ingress Resource (your ingress.yaml rules)
-   │  Defines which host/path maps to which Service
-   ▼
-Service (ClusterIP)
-   │  Finds pods using label selector. Load balances across matching pods.
-   ▼
-Pod (your Express container)
-      Handles the request and sends back a response
-```
-
-### Cluster architecture
+### Cluster ka poora picture
 
 ```
-┌─────────────────── KUBERNETES CLUSTER (Docker Desktop) ───────────────────┐
-│                                                                            │
-│  ┌─── MASTER NODE · Control Plane ───┐   ┌─── WORKER NODE · Pods run ────┐ │
-│  │                                   │   │                               │ │
-│  │  API Server   Scheduler           │   │  kubelet   kube-proxy         │ │
-│  │  Controller Manager   etcd        │   │  Container Runtime            │ │
-│  │                                   │   │                               │ │
-│  │  System pods:                     │   │  Deployment                   │ │
-│  │   coredns, kube-proxy,            │   │   └─ ReplicaSet               │ │
-│  │   ingress-nginx, metrics-server   │   │       ├─ Pod 1 (app=express)  │ │
-│  │                                   │   │       ├─ Pod 2 (app=express)  │ │
-│  └───────────────────────────────────┘   │       └─ Pod 3 (HPA scaled)   │ │
-│                                          └───────────────────────────────┘ │
-│  Service (ClusterIP) · Ingress · HPA · Secrets / ConfigMap                 │
-└────────────────────────────────────────────────────────────────────────────┘
-
-Browser/curl → localhost → Ingress Controller → Service → Pod
-kubectl → API Server → Scheduler/Controller → kubelet on Worker → Pod created
+┌──────────────────── KUBERNETES CLUSTER (Docker Desktop) ────────────────────┐
+│                                                                              │
+│  ┌─── MASTER / Control Plane ───┐     ┌─── WORKER NODE ───────────────────┐ │
+│  │  API Server   Scheduler      │     │  kubelet   kube-proxy             │ │
+│  │  Controller Manager   etcd   │     │  Container Runtime                │ │
+│  │                              │     │                                   │ │
+│  │  System pods:                │     │  Deployment                       │ │
+│  │   coredns, kube-proxy,       │     │   └─ ReplicaSet                   │ │
+│  │   ingress-nginx,             │     │       ├─ Pod 1 (app=express)      │ │
+│  │   metrics-server             │     │       ├─ Pod 2 (app=express)      │ │
+│  └──────────────────────────────┘     │       └─ Pod 3 (HPA ne banaya)    │ │
+│                                       └───────────────────────────────────┘ │
+│  Service · Ingress · HPA · ConfigMap / Secret                                │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Control plane components
+### Control Plane ke 4 hisse
 
-| Component | Role |
+| Component | Kaam | Analogy |
+|---|---|---|
+| **API Server** | Har `kubectl` command ka entry point | Reception desk |
+| **Scheduler** | Naya pod kis node par chalega, ye decide karta hai | Seat allotment wala |
+| **Controller Manager** | Control loops chalata hai (ReplicaSet, Deployment...) | Floor manager jo gap check karta rehta hai |
+| **etcd** | Poore cluster ki state ka key-value database | Register / record book |
+
+### Worker Node ke 3 hisse
+
+| Component | Kaam |
 |---|---|
-| **API Server** | Entry point for every `kubectl` command and every internal component. |
-| **Scheduler** | Decides which node a new pod should run on (based on CPU/memory availability). |
-| **Controller Manager** | Runs the control loops (ReplicaSet, Deployment, Node controllers…) that keep actual state = desired state. |
-| **etcd** | Key-value database that stores the whole cluster state. |
+| **kubelet** | Node ka agent. API server se kaam leta hai, pods chalu rakhta hai |
+| **kube-proxy** | Services ke liye networking rules sambhalta hai |
+| **Container runtime** | Asli me containers chalata hai (containerd/Docker) |
 
-### Worker node components
+### Jab tum `kubectl apply -f deployment.yaml` chalate ho to kya hota hai
 
-| Component | Role |
-|---|---|
-| **kubelet** | Agent on each node. Talks to the API server and makes sure assigned pods are running. |
-| **kube-proxy** | Maintains networking rules so Services can reach pods. |
-| **Container runtime** | Actually runs containers (containerd / Docker). |
+1. `kubectl` YAML ko **API Server** ko bhejta hai.
+2. API Server validate karke **etcd** me store karta hai.
+3. **Deployment controller** dekhta hai naya Deployment aaya → **ReplicaSet** banata hai.
+4. **ReplicaSet controller** dekhta hai "2 pods chahiye, 0 hain" → **Pod objects** banata hai.
+5. **Scheduler** har pod ko ek node assign karta hai.
+6. Us node ka **kubelet** image pull karke container start karta hai.
+7. Pod `Running` → `Ready` hota hai → Service us par traffic bhejna shuru karti hai.
 
-### What happens when you run `kubectl apply -f deployment.yaml`
+### Traffic ka safar (request ki journey)
 
-1. `kubectl` sends the YAML to the **API Server**.
-2. API Server validates it and stores it in **etcd**.
-3. **Deployment controller** sees a new Deployment → creates a **ReplicaSet**.
-4. **ReplicaSet controller** sees "need 2 pods, have 0" → creates **Pod objects**.
-5. **Scheduler** assigns each pod to a node.
-6. **kubelet** on that node pulls the image and starts the container.
-7. Pod becomes `Running` → `Ready` → Service starts sending traffic to it.
+```
+Browser
+   │  http://express.local ya http://localhost
+   ▼
+Ingress Controller (nginx pod)     ← asli traffic yahan aata hai
+   │  Ingress rules padhta hai
+   ▼
+Ingress rules (tumhari ingress.yaml)  ← "kis path ko kahan bhejna hai"
+   ▼
+Service (ClusterIP)                ← label se pods dhundhta hai, load balance karta hai
+   ▼
+Pod (Express container)            ← request handle karke response deta hai
+```
 
-### Project file structure
+Is journey ko yaad rakho — ye guide ke Part 3 aur 4 me ek-ek step karke banayenge.
+
+### Yaad rakho
+- Control Plane **decide** karta hai, Worker Node **chalata** hai.
+- `kubectl` hamesha API Server se baat karta hai, kisi pod se seedha nahi.
+- Docker Desktop ka cluster single-node hai — seekhne ke liye perfect, production jaisa multi-node nahi.
+
+---
+
+# PART 2 — SETUP
+
+## 3. Docker Desktop me Kubernetes enable karo
+
+> **Ek line me:** Settings me ek checkbox, 2-3 minute wait, aur tumhare laptop par poora Kubernetes cluster ready.
+
+### Step 1 — Enable karo
+
+Docker Desktop → **Settings (gear icon)** → **Kubernetes** → **Enable Kubernetes** tick karo → **Apply & Restart**.
+
+2–3 minute wait karo. Neeche status bar me **green Kubernetes icon** aa jaye to ready.
+
+> 💡 RAM kam ho to Docker Desktop ko kam se kam **4 GB** do (Settings → Resources). Isse kam me K8s + pods + metrics-server slow lagega.
+
+### Step 2 — Verify karo kubectl chal raha hai
+
+```bash
+kubectl version
+kubectl get nodes
+
+# Expected output:
+NAME             STATUS   ROLES
+docker-desktop   Ready    control-plane
+```
+
+### Step 3 — Context check karo
+
+```bash
+kubectl config current-context
+# Output hona chahiye: docker-desktop
+
+kubectl config get-contexts
+# kubectl jitne clusters ko jaanta hai unki list
+```
+
+`~/.kube/config` file me saare clusters ki connection info rehti hai. Baad me EKS cluster banaoge to wahan nayi entry add hogi aur context automatically EKS par switch ho jayega. Wapas aane ke liye:
+
+```bash
+kubectl config use-context docker-desktop
+```
+
+> ⚠️ **Galti jo mehengi padti hai:** `apply` ya `delete` chalane se pehle hamesha `kubectl config current-context` dekho. Local ke bajay production cluster par command chal gayi to bada nuksan hota hai.
+
+### Local images kaise kaam karti hain
+
+Docker Desktop ka Kubernetes **wahi Docker image store** use karta hai jo tumhara `docker` CLI karta hai. Matlab `docker build -t express-k8s:latest .` ke baad image K8s ko turant dikhti hai — registry me push karne ki zaroorat nahi. Isi liye local me `imagePullPolicy: IfNotPresent` kaam karta hai.
+
+> ⚠️ Agar tag `:latest` hai aur `imagePullPolicy` set nahi kiya, to K8s default `Always` maan leta hai aur Docker Hub se pull karne ki koshish karta hai → **`ImagePullBackOff`**. Local images ke liye hamesha `IfNotPresent` set karo (ya `v1` jaisa versioned tag use karo).
+
+### Yaad rakho
+- `kubectl get nodes` me `docker-desktop  Ready` dikhna chahiye.
+- Context check karna adat bana lo.
+- Local image ke liye `imagePullPolicy: IfNotPresent`.
+
+---
+
+## 4. YAML likhna seekho
+
+> **Ek line me:** K8s ka har resource ek YAML file hai jisme 4 cheezein zaroor hoti hain: `apiVersion`, `kind`, `metadata`, `spec`.
+
+### Kyun pehle YAML?
+Aage ke saare chapters me tum YAML hi likhoge. Isliye pehle structure samajh lo, phir har resource me bas `spec` badlega.
+
+### Chaar mandatory fields
+
+```yaml
+apiVersion: ...    # kaunsa API group/version
+kind: ...          # kis type ka resource
+metadata:          # name, labels, namespace, annotations
+  name: ...
+spec:              # desired state (shape kind ke hisaab se badalti hai)
+  ...
+```
+
+### apiVersion kaise pata kare
+
+Alag resources alag **API groups** me rehte hain:
+
+| Resource | apiVersion | Kyun |
+|---|---|---|
+| Pod, Service, ConfigMap, Secret, Namespace, PVC | `v1` | Core group — sabse purane, basic resources. Group prefix nahi lagta. |
+| Deployment, ReplicaSet, StatefulSet, DaemonSet | `apps/v1` | Apps group — pods manage karne wale high-level resources. |
+| Ingress, NetworkPolicy | `networking.k8s.io/v1` | Networking group. |
+| HorizontalPodAutoscaler | `autoscaling/v2` | Autoscaling group. |
+| Job, CronJob | `batch/v1` | Batch group — ek baar ya scheduled kaam. |
+
+> 💡 Bhool jao to: `kubectl explain deployment` ya `kubectl api-resources`.
+
+### Ek file me multiple resources
+
+`---` se alag karo:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+# ... deployment config
+
+---                    # separator — yahan naya resource shuru
+
+apiVersion: v1
+kind: Service
+# ... service config
+```
+
+> 💡 Project bada ho to files **alag** rakho (ek resource, ek file) aur poora folder ek saath apply karo: `kubectl apply -f k8s/`.
+
+### Project structure (hum ye banayenge)
 
 ```
 your-project/
@@ -178,46 +339,85 @@ your-project/
 │   ├── server.js
 │   ├── package.json
 │   └── dockerfile
-└── k8s/                  # all Kubernetes YAML files here
-    ├── deployment.yaml   # how to run the app
-    ├── service.yaml      # how to reach the app
-    └── ingress.yaml      # how external traffic enters
+└── k8s/                  # saari Kubernetes YAML files yahan
+    ├── deployment.yaml   # app kaise chalegi
+    ├── service.yaml      # app tak kaise pahunchenge
+    └── ingress.yaml      # bahar ka traffic kaise andar aayega
 ```
+
+### YAML ko generate karna (type karne se bacho)
+
+```bash
+# dry-run sirf YAML print karta hai, kuch create nahi karta
+kubectl create deployment express --image=express-k8s:latest --dry-run=client -o yaml > deployment.yaml
+kubectl create service clusterip express-service --tcp=80:3000 --dry-run=client -o yaml > service.yaml
+
+# Kisi bhi resource ke saare fields dekhne ke liye
+kubectl explain deployment.spec.template.spec.containers
+```
+
+### Imperative vs Declarative
+
+| Style | Example | Kab use kare |
+|---|---|---|
+| **Imperative** | `kubectl create deployment ...`, `kubectl scale ...` | Quick experiments, seekhne ke liye |
+| **Declarative** | `kubectl apply -f deployment.yaml` | Real projects — git me YAML hi source of truth |
+
+### `apply` vs `create` vs `replace`
+
+| Command | Kya karta hai |
+|---|---|
+| `kubectl create -f` | Banata hai; already hai to **error** |
+| `kubectl apply -f` | Banata ya update karta hai; dobara chalana safe. **Ye use karo.** |
+| `kubectl replace -f` | Poora replace; resource na ho to error |
+
+### Galtiyan
+- YAML me **tab nahi**, sirf **spaces** (2 spaces). Tab se error aata hai.
+- Strings jo number/bool jaisi dikhti hain, quote me likho: `"128Mi"`, `"true"`.
+- Apply se pehle check: `kubectl apply -f file.yaml --dry-run=server`.
+
+### Yaad rakho
+- Har YAML = `apiVersion + kind + metadata + spec`.
+- `apply` hi default command hai.
+- Doubt ho to `kubectl explain`.
 
 ---
 
-## 02. Pod
+# PART 3 — CORE BUILDING BLOCKS
 
-> **Key Concept** — A **Pod** is a wrapper around one or more containers. All containers in a pod share the same network (same IP address) and storage. In practice, most pods contain a single container — your app. You rarely create pods directly — a Deployment creates and manages them for you.
+## 5. Pod
 
-### What a pod contains
+> **Ek line me:** **Pod** = ek ya zyada containers ka wrapper. Ye K8s ki sabse chhoti unit hai. Tum pods ko seedha kam hi banate ho — Deployment banata hai.
 
-| What | Description |
+### Kyun chahiye
+K8s container ko seedha nahi chalata, pod ke andar chalata hai. Pod ke andar ke saare containers **ek hi IP aur ek hi network (`localhost`)** share karte hain, aur storage bhi share kar sakte hain. Zyada-tar pods me bas ek container hota hai: tumhari app.
+
+### Pod ke andar kya hota hai
+
+| Cheez | Matlab |
 |---|---|
-| **Container(s)** | One or more Docker containers. They share the same `localhost` inside the pod. |
-| **IP Address** | Each pod gets its own IP inside the cluster. This IP changes every time a pod restarts — which is why you use a Service instead of the pod IP directly. |
-| **Labels** | Key-value tags like `app: express`. Services and Deployments use these to find the pod. |
-| **Resources** | CPU and memory limits and requests defined in the pod spec. |
+| **Container(s)** | Ek ya zyada Docker containers. Pod ke andar `localhost` share karte hain. |
+| **IP Address** | Har pod ka apna IP. **Har restart par badal jata hai** — isi liye Service use karte hain, pod IP nahi. |
+| **Labels** | `app: express` jaise tags. Service/Deployment inhe use karke pod dhundhte hain. |
+| **Resources** | CPU/memory ki limits aur requests. |
 
-### Pod lifecycle
+### Pod ka lifecycle
 
 ```
-Pending            → pod is scheduled, image is being pulled
+Pending            → pod schedule hua, image pull ho rahi hai
    ↓
-Running            → container started successfully
+Running            → container start ho gaya
    ↓
-Ready              → readiness probe passed, pod receives traffic ✅
+Ready              → readiness probe pass, ab traffic aayega
    ↓
-CrashLoopBackOff   → container keeps crashing, Kubernetes retries
+CrashLoopBackOff   → container baar-baar crash ho raha hai, K8s retry kar raha hai
    ↓
-ImagePullBackOff   → cannot pull the Docker image
+ImagePullBackOff   → Docker image pull nahi ho pa rahi
 ```
 
-Other final states: `Succeeded` (job finished), `Failed`, `Terminating` (being deleted), `Evicted` (node ran out of resources), `OOMKilled` (container exceeded memory limit).
+Baaki states: `Succeeded` (job khatam), `Failed`, `Terminating` (delete ho raha hai), `Evicted` (node ke resources khatam), `OOMKilled` (container ne memory limit cross ki).
 
-> 💡 You **never create pods directly** in production. Always use a Deployment. If a pod is created directly and crashes, nothing restarts it. A Deployment automatically replaces crashed pods.
-
-### Minimal standalone pod (for quick experiments only)
+### Hands-on: ek test pod
 
 ```yaml
 apiVersion: v1
@@ -234,168 +434,159 @@ spec:
         - containerPort: 80
 ```
 
-### Multi-container pods (sidecar pattern)
+```bash
+kubectl apply -f pod.yaml
+kubectl get pods
+kubectl delete pod test-pod
+```
 
-Containers in one pod share network + volumes. Common pattern: **main app + sidecar** (log shipper, proxy, config reloader).
+Delete karne ke baad pod **wapas nahi aayega** — kyunki kisi ne use manage nahi kiya. Yahi pod ki sabse badi kamzori hai, aur Deployment isi ko theek karta hai (agla chapter).
+
+> 💡 Production me pods kabhi seedha mat banao. Standalone pod crash ho jaye to koi restart nahi karega.
+
+### Multi-container pod (sidecar pattern)
+
+Ek pod ke containers network + volumes share karte hain. Common pattern: **main app + sidecar** (log shipper, proxy, config reloader).
 
 ```
 Pod
 ├── container: express      (main app, port 3000)
-└── container: log-shipper  (reads shared volume, sends logs out)
+└── container: log-shipper  (shared volume se logs padhke bahar bhejta hai)
 ```
 
-### Check pod status
+### Pod ko inspect karna
 
 ```bash
-kubectl get pods                       # list all pods
-kubectl get pods -o wide               # include pod IP and node
-kubectl describe pod <pod-name>        # full details + events
-kubectl logs <pod-name>                # app console output
-kubectl exec -it <pod-name> -- sh      # shell inside pod
+kubectl get pods                       # saare pods
+kubectl get pods -o wide               # pod IP aur node ke saath
+kubectl describe pod <pod-name>        # poori details + events
+kubectl logs <pod-name>                # app ka console output
+kubectl exec -it <pod-name> -- sh      # pod ke andar shell
 ```
+
+### Yaad rakho
+- Pod = containers ka wrapper, apna IP, restart par IP badalta hai.
+- Standalone pod mar jaye to wapas nahi aata → **Deployment use karo**.
+- Debug ke liye `describe`, `logs`, `exec`.
 
 ---
 
-## 03. Deployment
+## 6. Deployment (aur uske andar ReplicaSet)
 
-> **Key Concept** — A **Deployment** is a manager for your pods. You tell it what image to run, how many replicas you want, and what resources each pod needs. It ensures that exact state is always maintained — if a pod crashes, Deployment creates a new one. If you update the image, it does a rolling update with zero downtime.
+> **Ek line me:** **Deployment** pods ka manager hai. Tum batate ho kaunsa image, kitni copies, kitne resources — wo hamesha utne pods zinda rakhta hai, update aur rollback bhi sambhalta hai.
 
-### What Deployment is responsible for
+### Kyun chahiye
+Pichhle chapter me dekha: akela pod mar jaye to khatam. Deployment wo manager hai jo bolta hai: "2 pods hamesha chalte rehne chahiye." Ek crash hua → naya bana deta hai.
 
-| Responsibility | What it means |
+### Deployment ki zimmedariyan
+
+| Kaam | Matlab |
 |---|---|
-| **Replica management** | Always keeps the exact number of pods running. If one crashes, a new one is created immediately. |
-| **Rolling update** | When you push a new image, Kubernetes replaces pods one by one. Old pods serve traffic until new ones are ready — zero downtime. |
-| **Rollback** | If a new version has a bug, one command goes back to the previous working version. |
-| **Scaling** | Change replica count manually or let HPA do it automatically based on CPU. |
+| **Replica management** | Hamesha exact utne pods chalu rakhta hai. Ek crash hua to turant naya. |
+| **Rolling update** | Naya image push karo to pods ek-ek karke replace hote hain. Purane tab tak traffic dete hain jab tak naye ready na ho — zero downtime. |
+| **Rollback** | Naye version me bug ho to ek command se purane working version par wapas. |
+| **Scaling** | Manually replicas badlo ya HPA se automatic. |
 
-### Full deployment.yaml with explanation
+### Poori deployment.yaml (line-by-line comments ke saath)
 
 ```yaml
-apiVersion: apps/v1          # Deployment lives in apps group
+apiVersion: apps/v1          # Deployment 'apps' group me rehta hai
 kind: Deployment
 metadata:
   name: express-deployment
 spec:
-  replicas: 2              # always keep 2 pods running
+  replicas: 2              # hamesha 2 pods chalte rahein
   selector:
     matchLabels:
-      app: express          # (1) manage pods that have this label
-  template:              # blueprint for each pod
+      app: express          # (1) Deployment un pods ko manage karega jinpar ye label ho
+  template:              # har pod ka blueprint
     metadata:
       labels:
-        app: express        # (2) stick this label on every pod created
-        owner: ankur       # extra label — deployment ignores it
+        app: express        # (2) har pod par ye label chipka do
+        owner: ankur       # extra label — Deployment ise ignore karta hai
     spec:
       containers:
         - name: express
           image: express-k8s:latest
-          imagePullPolicy: IfNotPresent  # use local image if it exists
+          imagePullPolicy: IfNotPresent  # local image ho to wahi use karo
           ports:
-            - containerPort: 3000         # port your app listens on
+            - containerPort: 3000         # tumhari app is port par sunti hai
           resources:
             limits:
-              memory: "128Mi"            # max memory pod can use
-              cpu: "500m"               # max CPU (500m = 0.5 core)
+              memory: "128Mi"            # pod maximum itni memory le sakta hai
+              cpu: "500m"               # maximum CPU (500m = aadha core)
             requests:
-              memory: "64Mi"             # memory reserved for this pod
-              cpu: "250m"               # CPU reserved (required for HPA)
+              memory: "64Mi"             # is pod ke liye reserved memory
+              cpu: "250m"               # reserved CPU (HPA ke liye zaroori)
 ```
 
-### Key fields explained
+### Important fields ka matlab
 
-| Field | Value | What it does |
+| Field | Value | Kya karta hai |
 |---|---|---|
-| `apiVersion` | `apps/v1` | Deployment belongs to the apps API group. Not the core group (`v1`) — that's for Pods and Services. |
-| `replicas` | `2` | Always maintain 2 running pods. If one crashes, a new one is created immediately. |
-| `selector.matchLabels` | `app: express` | The Deployment manages pods that have ALL these labels. Must match `template.metadata.labels`. |
-| `template.metadata.labels` | `app: express` | Labels stamped on every pod this Deployment creates. Service uses these to find pods. |
-| `imagePullPolicy` | `IfNotPresent` | Use local image if available. On EKS change this to `Always` so it pulls from ECR on every restart. |
-| `resources.requests` | `cpu: 250m` | CPU/memory reserved for this pod. HPA requires requests to be set — it uses this to calculate utilization %. |
-| `resources.limits` | `cpu: 500m` | Maximum CPU/memory the pod can use. Prevents one pod from starving others. |
+| `apiVersion` | `apps/v1` | Deployment `apps` group me hai, core group (`v1`) me nahi — wo Pod/Service ke liye hai. |
+| `replicas` | `2` | Hamesha 2 running pods. Ek crash → naya turant. |
+| `selector.matchLabels` | `app: express` | Deployment un pods ko manage karta hai jinpe **saare** ye labels hon. `template.metadata.labels` se match hona zaroori. |
+| `template.metadata.labels` | `app: express` | Is Deployment ke har pod par lagne wale labels. Service inhi se pods dhundhti hai. |
+| `imagePullPolicy` | `IfNotPresent` | Local image ho to wahi. EKS par `Always` karo taaki ECR se pull ho. |
+| `resources.requests` | `cpu: 250m` | Is pod ke liye reserved CPU/memory. **HPA ko requests chahiye** — utilization % isi se nikalta hai. |
+| `resources.limits` | `cpu: 500m` | Pod maximum itna use kar sakta hai. Ek pod dusron ko bhookha na rakhe. |
 
-> ⚠️ `spec.selector` is **immutable** after creation. If you need to change it, delete and recreate the Deployment.
+> ⚠️ `spec.selector` **immutable** hai (banne ke baad badal nahi sakte). Badalna ho to Deployment delete karke dobara banao.
 
-### CPU units explained
+### CPU aur Memory units
 
-| Value | Meaning |
-|---|---|
-| `1000m` | 1 full CPU core |
-| `500m` | Half a CPU core |
-| `250m` | Quarter of a CPU core |
+| CPU | Matlab | Memory | Matlab |
+|---|---|---|---|
+| `1000m` | 1 poora core | `64Mi` | 64 mebibyte (≈ 67 MB) |
+| `500m` | Aadha core | `128Mi` | 128 mebibyte |
+| `250m` | Chauthai core | `1Gi` | 1 gibibyte |
 
-### Memory units
+### Requests vs Limits: limit cross hone par kya hota hai
 
-| Value | Meaning |
-|---|---|
-| `64Mi` | 64 mebibytes (≈ 67 MB) |
-| `128Mi` | 128 mebibytes |
-| `1Gi` | 1 gibibyte |
-
-### Requests vs Limits — what happens when exceeded
-
-| Resource | Exceeding **limit** | Result |
+| Resource | **Limit** cross | Natija |
 |---|---|---|
-| **CPU** | Throttled (slowed down) | Pod keeps running, but slower |
-| **Memory** | Container is killed | Status `OOMKilled`, then restarted |
+| **CPU** | Throttle (slow) | Pod chalta rehta hai, bas slow ho jata hai |
+| **Memory** | Container kill | Status `OOMKilled`, phir restart |
 
-Requests are used by the **Scheduler** to decide where a pod fits; limits are enforced at **runtime**.
+**Requests** ko Scheduler use karta hai ye decide karne me ki pod kahan fit hoga. **Limits** runtime par enforce hoti hain.
 
-### Useful Deployment commands
+### Andar ka ReplicaSet — Deployment kaise kaam karta hai
+
+Deployment khud pods nahi banata. Wo ek **ReplicaSet** banata hai, aur ReplicaSet pods banata hai.
+
+```
+Deployment  →  ReplicaSet manage karta hai
+    ↓
+ReplicaSet  →  "replicas: 2" matlab 2 pods hamesha zinda
+    ↓
+Pod 1 (running)   Pod 2 (running)
+    ↓  Pod 1 crash hua
+ReplicaSet dekhta hai: 1 chal raha hai, chahiye 2
+    ↓
+ReplicaSet automatically Pod 3 banata hai
+```
+
+**Fir Deployment ki zaroorat kyun, sirf ReplicaSet kyun nahi?**
+
+| Agar use karo | Milta hai |
+|---|---|
+| **Deployment** | ReplicaSet management + rolling updates + rollback history. Practice me hamesha ye. |
+| **ReplicaSet seedha** | Sirf pod count maintain. Rolling update nahi, rollback nahi. Recommended nahi. |
+
+`kubectl get replicasets` me tumhe auto-generated naam dikhega, jaise `express-deployment-7d9f8b6c4`. Ye hash pod template ka fingerprint hai. Image update karne par **naya ReplicaSet** banta hai aur purana scale down hokar 0 par rehta hai (rollback ke liye bacha ke rakha jata hai):
 
 ```bash
-kubectl get deployments
-kubectl rollout status deployment/express-deployment
-kubectl rollout undo deployment/express-deployment    # rollback
-kubectl scale deployment express-deployment --replicas=5
-kubectl rollout restart deployment/express-deployment # re-pull image
+kubectl get replicasets
+
+# Rollout ke baad 2 ReplicaSets dikhenge:
+# express-deployment-7d9f8b6c4   2   2   2   (naya — active)
+# express-deployment-5c8a3d1b2   0   0   0   (purana — rollback ke liye rakha)
 ```
 
----
+ReplicaSet pods ko **label selector** se gintaa hai. Agar tum same labels wala pod haath se bana do, to ReplicaSet use bhi ginega aur ho sakta hai apna ek pod delete kar de. Isliye har Deployment ke labels unique rakho.
 
-## 04. ReplicaSet
-
-> **Key Concept** — A **ReplicaSet** is the component that guarantees *N* copies of your pod are always running. If a pod crashes, ReplicaSet creates a replacement. If you have too many pods, it deletes extras. You almost never create a ReplicaSet directly — a **Deployment creates and manages a ReplicaSet for you**, and also handles rolling updates and rollbacks on top of it.
-
-### Deployment → ReplicaSet → Pods relationship
-
-```
-Deployment  →  owns and manages a ReplicaSet
-    ↓
-ReplicaSet  →  ensures replicas: 2 pods are always alive
-    ↓
-Pod 1 (running ✅)   Pod 2 (running ✅)
-    ↓  Pod 1 crashes
-ReplicaSet detects: 1 pod running, desired is 2
-    ↓
-ReplicaSet creates Pod 3 automatically ✅
-```
-
-### Why you don't write ReplicaSet YAML directly
-
-| If you use | What you get |
-|---|---|
-| **Deployment** | ReplicaSet management + rolling updates + rollback history. Always use this in practice. |
-| **ReplicaSet directly** | Pod count maintenance only. No rolling updates, no rollback. Not recommended. |
-
-> 💡 When you run `kubectl get replicasets` you'll see an auto-generated ReplicaSet like `express-deployment-7d9f8b6c4` — the hash suffix is a fingerprint of the pod template. When you update the image, a **new ReplicaSet** is created and the old one is scaled down to zero (but kept for rollback).
-
-### Viewing ReplicaSets
-
-```bash
-kubectl get replicasets                          # list all ReplicaSets
-kubectl describe replicaset <rs-name>           # details + events
-
-# After a rollout you will see TWO replicasets:
-# express-deployment-7d9f8b6c4   2   2   2   (new — active)
-# express-deployment-5c8a3d1b2   0   0   0   (old — kept for rollback)
-```
-
-### How ReplicaSet selects pods
-
-ReplicaSet uses **label selectors** — it looks for pods with matching labels and counts them. If you manually create a pod with the same labels, the ReplicaSet will count it and may delete one of its own pods to maintain the desired count. This is why labels must be unique per Deployment.
-
-### replicaset.yaml — for reference only, use Deployment in practice
+Reference ke liye ReplicaSet ki YAML (practice me Deployment use karo):
 
 ```yaml
 apiVersion: apps/v1
@@ -403,10 +594,10 @@ kind: ReplicaSet
 metadata:
   name: express-rs
 spec:
-  replicas: 2                  # desired pod count
+  replicas: 2
   selector:
     matchLabels:
-      app: express            # manage pods with this label
+      app: express
   template:
     metadata:
       labels:
@@ -420,126 +611,374 @@ spec:
             - containerPort: 3000
 ```
 
-### Self-healing demo
+### Hands-on: self-healing dekho
 
 ```bash
-kubectl get pods                         # note pod names
-kubectl delete pod <one-pod-name>        # kill one
-kubectl get pods -w                      # watch: a new pod appears instantly
+kubectl get pods                         # pod ke naam note karo
+kubectl delete pod <ek-pod-ka-naam>      # ek ko maar do
+kubectl get pods -w                      # dekho: naya pod turant aa jata hai
 ```
+
+### Deployment ke useful commands
+
+```bash
+kubectl get deployments
+kubectl rollout status deployment/express-deployment
+kubectl rollout undo deployment/express-deployment    # rollback
+kubectl scale deployment express-deployment --replicas=5
+kubectl rollout restart deployment/express-deployment # image dobara pull
+```
+
+### Yaad rakho
+- Deployment → ReplicaSet → Pods (teen layer).
+- `selector.matchLabels` aur `template.labels` match hone chahiye.
+- `requests` HPA ke liye zaroori, `limits` pod ko control me rakhti hai.
+- Memory limit cross = OOMKilled, CPU limit cross = bas slow.
 
 ---
 
-## 05. Service
+## 7. Labels aur Selectors
 
-> **Key Concept** — Pods are temporary — they crash and restart with new IP addresses. A **Service** gives you a stable endpoint that never changes. It finds pods using **label selectors** and load balances traffic across all matching pods automatically. When a pod is added or removed, the Service updates its list instantly.
+> **Ek line me:** **Labels** pods par lage key-value tags hain, **Selectors** unhe filter karne wale. Deployment aur Service dono isi se pods dhundhte hain — koi pod ka naam ya IP hardcode nahi hota.
 
-### How Service finds pods (Labels & Selectors)
+### Kyun chahiye
+Pods mar kar naye banenge, naam aur IP badlenge. To "ye wala pod" kehna bekaar hai. Isliye K8s kehta hai: "jis pod par `app=express` label ho, wahi mera hai."
+
+### Teen-tarfa connection
 
 ```yaml
-apiVersion: v1              # Service is a core resource
+# deployment.yaml
+selector:
+  matchLabels:
+    app: express      # (1) Deployment is label wale pods ko manage karta hai
+template:
+  metadata:
+    labels:
+      app: express    # (2) Pod par ye label lagta hai
+
+---
+# service.yaml
+selector:
+  app: express        # (3) Service is label wale pods ko traffic bhejti hai
+```
+
+(1) aur (3) ko (2) se match karna zaroori hai. Yahi pura jaadu hai.
+
+### Selector matching rules
+
+| Pod ke Labels | Selector: `app=express` | Result |
+|---|---|---|
+| `app: express` | Match | ✅ Selected |
+| `app: express, env: prod` | Match (extra label ignore) | ✅ Selected |
+| `app: backend` | Match nahi | ❌ Ignored |
+| `app: express, env: staging` | `app=express` match hota hai | ✅ Selected |
+
+### Labels se staging aur production alag karna
+
+```yaml
+# staging-deployment.yaml
+selector:
+  matchLabels:
+    app: express
+    env: staging     # sirf staging pods manage karega
+
+# production-deployment.yaml
+selector:
+  matchLabels:
+    app: express
+    env: production  # sirf production pods manage karega
+```
+
+Dono ek hi cluster me rehte hain par ek dusre me dakhal nahi dete.
+
+### CLI se labels ke saath kaam
+
+```bash
+kubectl get pods --show-labels
+kubectl get pods -l app=express                 # label se filter
+kubectl get pods -l 'env in (staging,prod)'     # set-based selector
+kubectl label pod <pod-name> env=debug          # label add
+kubectl label pod <pod-name> env-               # label "env" hatao
+```
+
+### Labels vs Annotations
+
+| | Labels | Annotations |
+|---|---|---|
+| Kaam | Objects **pehchanna aur select** karna | Extra **metadata** lagana |
+| Selectors use karte hain? | Haan | Nahi |
+| Example | `app: express` | `nginx.ingress.kubernetes.io/proxy-body-size: "10m"` |
+
+### Galtiyan
+- Label me typo (`app: expres`) → Service ko koi pod nahi milta → `kubectl get endpoints` me `<none>`.
+- Do alag Deployments ke same labels → ek dusre ke pods ginne lagte hain.
+
+### Yaad rakho
+- Label = tag, Selector = filter.
+- Deployment (own pods) aur Service (route traffic) dono selector se kaam karte hain.
+
+---
+
+## 8. Service
+
+> **Key idea:** Pods temporary hain, unka IP badalta rehta hai. **Service** ek **stable address** deti hai jo kabhi nahi badalta, aur peeche ke pods me traffic baant deti hai.
+
+### Kyun chahiye
+Maan lo frontend backend ko call karna chahta hai. Backend pod ka IP `10.1.0.5` tha, wo crash hua, naya pod `10.1.0.9` par aaya. Frontend ka kya? Service ye problem solve karti hai: wo ek fixed naam/IP deti hai, aur andar se **label selector** se live pods dhundhti rehti hai. Pod add/remove ho to list turant update.
+
+### Basic service.yaml
+
+```yaml
+apiVersion: v1              # Service core resource hai
 kind: Service
 metadata:
   name: express-service
 spec:
   selector:
-    app: express            # find ALL pods with label app=express
+    app: express            # app=express label wale SAARE pods dhundho
   ports:
     - protocol: TCP
-      port: 80              # port the service listens on (inside cluster)
-      targetPort: 3000      # port your app listens on inside the container
-  type: ClusterIP          # only accessible inside the cluster
+      port: 80              # Service cluster ke andar is port par sunti hai
+      targetPort: 3000      # container ke andar tumhari app ka port
+  type: ClusterIP          # sirf cluster ke andar accessible
 ```
-
-### Three Service types
-
-| Type | Accessible from | Use case |
-|---|---|---|
-| **ClusterIP** | Inside cluster only | Pod-to-pod communication. Default type. Used with Ingress. |
-| **NodePort** | External via port number | Quick local testing. Access via `localhost:30001`. No Ingress needed. |
-| **LoadBalancer** | External via cloud LB | Production on AWS/GCP. Creates real Load Balancer. Costs money. |
-
-(There is also **ExternalName**, which maps a Service name to an external DNS name — useful for pointing at a managed DB.)
 
 ### port vs targetPort
 
-| Field | Value | Meaning |
+| Field | Value | Matlab |
 |---|---|---|
-| `port` | `80` | The port the Service exposes inside the cluster. Other pods call this service on port 80. |
-| `targetPort` | `3000` | The port your app is actually listening on inside the container. Must match `containerPort` in deployment. |
+| `port` | `80` | Service ka port. Dusre pods `express-service:80` call karte hain. |
+| `targetPort` | `3000` | Container ke andar asli port. Deployment ke `containerPort` se match hona chahiye. |
 
-### NodePort for local testing
+### Teen Service types
+
+| Type | Kahan se accessible | Kab use kare |
+|---|---|---|
+| **ClusterIP** | Sirf cluster ke andar | Pod-to-pod. Default. Ingress ke saath use hota hai. |
+| **NodePort** | Bahar se port number ke through | Local testing. `localhost:30001`. Ingress nahi chahiye. |
+| **LoadBalancer** | Cloud load balancer se | Production (AWS/GCP). Asli LB banta hai, paise lagte hain. |
+
+(Ek aur type hai **ExternalName**: Service ke naam ko kisi external DNS naam se map karta hai — jaise managed DB.)
+
+### NodePort (local testing ke liye)
 
 ```yaml
 type: NodePort
 ports:
   - port: 80
     targetPort: 3000
-    nodePort: 30001    # access via localhost:30001 in browser
+    nodePort: 30001    # browser me localhost:30001
 ```
 
-NodePort range is **30000–32767**.
+NodePort range: **30000–32767**.
 
-### How Service load balances
+### Service load balancing kaise karti hai
 
 ```
-Service receives request (selector: app=express)
+Request aati hai (selector: app=express)
     ↓
-Looks up Endpoints list (live pod IPs)
+Endpoints list dekhti hai (live pod IPs)
     ↓
 Request 1 → Pod 1 (192.168.1.10)
 Request 2 → Pod 2 (192.168.1.11)
 Request 3 → Pod 3 (192.168.1.12)
-Request 4 → Pod 1 (round robin) ✅
+Request 4 → Pod 1 (round robin)
 ```
 
 ```bash
 kubectl get services
-kubectl get endpoints express-service   # see which pod IPs are in the pool
+kubectl get endpoints express-service   # pool me kaunse pod IPs hain
 ```
 
-### Service DNS — pods talk by name
+### Service DNS: pods naam se baat karte hain
 
-Every Service gets an internal DNS name via **CoreDNS**:
+Har Service ko CoreDNS ke through internal DNS naam milta hai:
 
 ```
 <service-name>.<namespace>.svc.cluster.local
 ```
 
-| From where | How to call |
+| Kahan se call kar rahe ho | Kaise |
 |---|---|
 | Same namespace | `http://express-service` |
-| Different namespace | `http://express-service.other-ns` |
-| Full form | `http://express-service.default.svc.cluster.local` |
+| Dusra namespace | `http://express-service.other-ns` |
+| Poora naam | `http://express-service.default.svc.cluster.local` |
 
 ```js
-// Inside another pod (e.g. frontend calling backend)
+// Kisi dusre pod ke andar (jaise frontend se backend call)
 const res = await fetch("http://express-service/api/users"); // port 80 → targetPort 3000
 ```
 
-> ⚠️ Inside a pod, `localhost` means *that pod only*. To call another service always use its **service name**, never `localhost`.
+> ⚠️ Pod ke andar `localhost` ka matlab **sirf wahi pod** hai. Dusri service ko call karna ho to **service ka naam** use karo, kabhi `localhost` nahi (isi se `ECONNREFUSED` aata hai).
+
+### Yaad rakho
+- Service = stable address + load balancer, pods ko label se dhundhti hai.
+- `targetPort` = container ka port, `port` = service ka port.
+- Cluster ke andar: service name se baat. Bahar se: NodePort / Ingress.
 
 ---
 
-## 06. Ingress
+## Checkpoint 1: App deploy karke chalao
 
-> **Key Concept** — An **Ingress** resource is a set of HTTP routing rules written in YAML. It says things like: "traffic for `express.local/` should go to `express-service`" or "traffic for `express.local/auth` should go to `auth-service`". The Ingress itself does nothing — it only works when an **Ingress Controller** is installed to read and act on these rules.
+Ab tak Pod, Deployment, Labels, Service seekhe. Ab chalake dekhte hain.
 
-### Full ingress.yaml with explanation
+### Step 1 — Docker image banao
+
+```bash
+cd Backend/
+docker build -t express-k8s:latest .
+```
+
+Backend ka minimal `dockerfile`:
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+`.dockerignore`:
+
+```
+node_modules
+.env
+.git
+k8s
+```
+
+> App ko `0.0.0.0` par listen karna chahiye (ya bas `app.listen(3000)`), sirf `127.0.0.1` par nahi, warna Service us tak pahunch nahi paati.
+
+### Step 2 — YAML apply karo
+
+```bash
+kubectl apply -f k8s/    # k8s folder ki saari files apply
+
+# Ya ek-ek karke:
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+```
+
+### Step 3 — Verify karo
+
+```bash
+kubectl get pods           # STATUS: Running, READY: 1/1
+kubectl get services       # service sahi ports ke saath dikhe
+kubectl get endpoints express-service   # pod IPs dikhne chahiye
+```
+
+### Step 4 — Abhi (Ingress ke bina) app kholo
+
+Ingress agle part me aayega. Abhi do aasan tarike:
+
+```bash
+# Tarika A: port-forward (kisi bhi service par kaam karta hai)
+kubectl port-forward svc/express-service 8080:80
+# Ab browser: http://localhost:8080
+```
+
+Ya Service me `type: NodePort` + `nodePort: 30001` karke `http://localhost:30001`.
+
+Agar ye chal gaya to Part 3 pura hua: Pod → Deployment → Service sab kaam kar raha hai.
+
+### Code change ke baad update
+
+```bash
+# 1. Code badla → image dobara banao
+docker build -t express-k8s:latest .
+
+# 2. Deployment restart karo taaki naya image uthaye
+kubectl rollout restart deployment/express-deployment
+```
+
+### Delete karna ho to
+
+```bash
+kubectl delete -f k8s/                              # folder ki sab cheezein delete
+kubectl delete deployment express-deployment        # ek resource delete
+```
+
+---
+
+# PART 4 — BAHAR SE TRAFFIC
+
+## 9. Ingress Controller
+
+> **Ek line me:** **Ingress Controller** ek **nginx pod** hai jo cluster ke andar chalta hai, Ingress rules padhta hai, aur asli HTTP traffic route karta hai. Iske bina Ingress YAML sirf ek bekaar config file hai.
+
+### Kyun pehle Controller, Ingress baad me?
+Ingress sirf **rules** hain ("is path ko us service par bhejo"). Rules ko koi **lagu** bhi karna padta hai. Wahi kaam Controller karta hai. Isliye controller ek baar install karna padta hai.
+
+> **Analogy:** Ingress = reception ka "kaun kis floor jayega" wala chart. Ingress Controller = wo receptionist jo chart padh kar logon ko bhejta hai. Receptionist na ho to chart deewar par lata raha.
+
+### Ingress vs Ingress Controller
+
+| | Ingress Resource | Ingress Controller |
+|---|---|---|
+| Kya hai | Routing rules wali YAML file | Cluster me chalta nginx pod |
+| Kaun banata hai | Tum — `kubectl apply -f ingress.yaml` | Ek baar install — `kubectl apply -f nginx-url` |
+| Traffic route karta hai? | Nahi, sirf rules define karta hai | Haan, rules padh ke asli traffic route karta hai |
+| Namespace | `default` (tumhari app ka) | `ingress-nginx` (apna alag) |
+
+### Install karo
+
+```bash
+kubectl apply -f \
+  https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
+```
+
+### Verify karo
+
+```bash
+kubectl get pods -n ingress-nginx
+
+# Expected:
+NAME                                        READY   STATUS
+ingress-nginx-controller-xxxxxxxxx-xxxxx    1/1     Running
+
+kubectl get svc -n ingress-nginx
+# ingress-nginx-controller   LoadBalancer   ...   EXTERNAL-IP: localhost
+```
+
+Docker Desktop par controller ki `LoadBalancer` Service ko `EXTERNAL-IP: localhost` milta hai. Isi liye `http://localhost` (port 80/443) tumhari app tak pahunch jata hai.
+
+### Controller ke logs (404/502 debug ke liye bahut kaam ke)
+
+```bash
+kubectl logs -n ingress-nginx deploy/ingress-nginx-controller
+```
+
+### Yaad rakho
+- Controller ek baar install hota hai, alag namespace (`ingress-nginx`) me.
+- Ingress YAML ke bina controller kuch route nahi karega, aur controller ke bina Ingress YAML bekaar hai.
+
+---
+
+## 10. Ingress
+
+> **Ek line me:** **Ingress** = HTTP routing rules ki YAML: "`express.local/` ko `express-service` par bhejo", "`/auth` ko `auth-service` par bhejo". Ek hi entry point, kai services.
+
+### Kyun chahiye
+Har service ke liye alag NodePort ya LoadBalancer banana mehenga aur ganda hai. Ingress se **ek hi entry point** (port 80/443) se host aur path ke hisaab se multiple services tak pahunch sakte ho.
+
+### Poori ingress.yaml
 
 ```yaml
-apiVersion: networking.k8s.io/v1   # Ingress is in the networking group
+apiVersion: networking.k8s.io/v1   # Ingress networking group me hai
 kind: Ingress
 metadata:
   name: express-ingress
 spec:
-  ingressClassName: nginx         # which controller handles this rule
+  ingressClassName: nginx         # kaunsa controller is rule ko sambhalega
   rules:
-    - host: express.local          # domain to match
+    - host: express.local          # kaunsa domain match kare
       http:
         paths:
           - path: /
-            pathType: Prefix         # match / and everything after
+            pathType: Prefix         # / aur uske baad ka sab match
             backend:
               service:
                 name: express-service
@@ -547,7 +986,53 @@ spec:
                   number: 80
 ```
 
-### Path based routing — multiple services on one domain
+### Important fields
+
+| Field | Value | Kya karta hai |
+|---|---|---|
+| `ingressClassName` | `nginx` | Batata hai kaunsa controller ye rule uthaye. nginx aur traefik dono ho to har ek sirf apne rules uthata hai. |
+| `host` | `express.local` | Sirf is Host header wala traffic match hota hai. Local me hosts file me add karna padta hai. |
+| `pathType: Prefix` | `Prefix` | Path aur uske aage sab match. `/api` → `/api/users`, `/api/data` bhi. |
+| `pathType: Exact` | `Exact` | Sirf wahi exact path. `/api` → `/api/users` match **nahi** hota. |
+
+### Local me sabse aasan: host hata do
+
+```yaml
+rules:
+  - http:                     # host: field nahi — saara traffic match
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: express-service
+              port:
+                number: 80
+```
+
+`http://localhost` se seedha khulega, hosts file edit nahi karni padegi.
+
+### Host ke saath: `express.local` hosts file me add karo
+
+**Mac / Linux**
+
+```bash
+sudo nano /etc/hosts
+
+# Neeche ye line add karo:
+127.0.0.1  express.local
+```
+
+**Windows** (Notepad **Administrator** me kholo)
+
+```
+File: C:\Windows\System32\drivers\etc\hosts
+Line: 127.0.0.1  express.local
+```
+
+Ab browser me `http://express.local` nginx Ingress Controller par aayega.
+
+### Path-based routing: ek domain, kai services
 
 ```yaml
 rules:
@@ -568,31 +1053,7 @@ rules:
               port: { number: 80 }
 ```
 
-### Key fields explained
-
-| Field | Value | What it does |
-|---|---|---|
-| `ingressClassName` | `nginx` | Tells Kubernetes which Ingress Controller should handle this rule. If you have multiple controllers (nginx, traefik), each only picks up rules meant for it. |
-| `host` | `express.local` | Only traffic with this Host header matches this rule. Add it to `/etc/hosts` for local development. |
-| `pathType: Prefix` | `Prefix` | Matches the path and everything after it. `/api` matches `/api/users`, `/api/data` etc. |
-| `pathType: Exact` | `Exact` | Only matches that exact path. `/api` does NOT match `/api/users`. |
-
-### For local development — skip the host
-
-```yaml
-rules:
-  - http:                     # no host: field — matches all traffic
-      paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: express-service
-              port:
-                number: 80
-```
-
-Access via `http://localhost` directly — no `/etc/hosts` edit needed.
+nginx hamesha **sabse lamba matching path** chunta hai, isliye `/auth/...` auth-service par jayega aur baaki sab main-service par.
 
 ### Useful nginx annotations
 
@@ -600,15 +1061,15 @@ Access via `http://localhost` directly — no `/etc/hosts` edit needed.
 metadata:
   name: express-ingress
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"        # allow larger uploads (default 1m)
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"     # seconds, for slow APIs
-    nginx.ingress.kubernetes.io/rewrite-target: /$2           # strip a path prefix (see below)
-    nginx.ingress.kubernetes.io/enable-cors: "true"           # CORS at ingress level
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"        # bade uploads allow (default 1m)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"     # slow APIs ke liye (seconds)
+    nginx.ingress.kubernetes.io/rewrite-target: /$2           # path prefix hataana (neeche dekho)
+    nginx.ingress.kubernetes.io/enable-cors: "true"           # ingress level par CORS
 ```
 
-### Strip a path prefix (rewrite)
+### Path prefix strip karna (rewrite)
 
-Want `localhost/api/users` to reach the backend as `/users`?
+`localhost/api/users` ko backend tak `/users` banakar bhejna ho:
 
 ```yaml
 metadata:
@@ -630,7 +1091,7 @@ spec:
 
 ### WebSockets (Socket.io)
 
-nginx ingress supports WebSocket upgrade out of the box. For long-lived connections increase timeouts:
+nginx ingress WebSocket upgrade by default support karta hai. Lambe connections ke liye timeouts badhao:
 
 ```yaml
 annotations:
@@ -638,21 +1099,21 @@ annotations:
   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 ```
 
-If you run **more than one backend replica with Socket.io**, you also need sticky sessions (or a Redis adapter):
+Agar Socket.io ke saath **ek se zyada backend replicas** hain, to sticky sessions chahiye (ya Redis adapter):
 
 ```yaml
 annotations:
   nginx.ingress.kubernetes.io/affinity: "cookie"
 ```
 
-### TLS (HTTPS) locally — optional
+### HTTPS locally (optional)
 
 ```bash
-# create a self-signed cert
+# self-signed certificate
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout tls.key -out tls.crt -subj "/CN=express.local"
 
-# store as a TLS secret
+# TLS secret banao
 kubectl create secret tls express-tls --key tls.key --cert tls.crt
 ```
 
@@ -667,292 +1128,66 @@ spec:
       # ...
 ```
 
----
+### Galtiyan
+- `ingressClassName` bhool gaye → koi controller rule nahi uthata, `ADDRESS` khali.
+- Backend `service.name` ya `port.number` galat → **503**.
+- Host/path match nahi → **404**.
 
-## 07. Ingress Controller
-
-> **Key Concept** — The **Ingress Controller** is a pod running nginx inside your cluster. It watches all Ingress resources and configures itself to route traffic according to those rules. Without the controller, your ingress.yaml is just a config file sitting there doing nothing. The controller is what makes it actually work.
-
-### Ingress vs Ingress Controller
-
-| What | Ingress Resource | Ingress Controller |
-|---|---|---|
-| What it is | A YAML file with routing rules | An actual nginx pod running in your cluster |
-| Created by | You — `kubectl apply -f ingress.yaml` | You install once — `kubectl apply -f nginx-url` |
-| Does it route traffic? | No — it only defines rules | Yes — reads rules and routes real HTTP traffic |
-| Namespace | `default` (your app namespace) | `ingress-nginx` (its own namespace) |
-
-### Install nginx Ingress Controller
-
-```bash
-kubectl apply -f \
-  https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
-```
-
-### Verify controller is running
-
-```bash
-kubectl get pods -n ingress-nginx
-
-# Expected output:
-NAME                                        READY   STATUS
-ingress-nginx-controller-xxxxxxxxx-xxxxx    1/1     Running ✅
-
-kubectl get svc -n ingress-nginx
-# ingress-nginx-controller   LoadBalancer   ...   EXTERNAL-IP: localhost
-```
-
-On Docker Desktop the controller's `LoadBalancer` Service gets `EXTERNAL-IP: localhost`, which is why `http://localhost` reaches your app on ports 80/443.
-
-### Add express.local to hosts file
-
-**Mac / Linux**
-
-```bash
-sudo nano /etc/hosts
-
-# Add this line at the bottom:
-127.0.0.1  express.local
-```
-
-**Windows** (open Notepad **as Administrator**)
-
-```
-File: C:\Windows\System32\drivers\etc\hosts
-Line: 127.0.0.1  express.local
-```
-
-Now `http://express.local` in your browser will route to your nginx Ingress Controller on localhost.
-
-> 💡 **ingressClassName: nginx** in your ingress.yaml is how the controller knows which rules are meant for it. If you had traefik installed too, it only picks up rules with `ingressClassName: traefik`.
-
-### Check the controller logs (very useful for 404/502 issues)
-
-```bash
-kubectl logs -n ingress-nginx deploy/ingress-nginx-controller
-```
+### Yaad rakho
+- Ingress = rules. Controller = unhe chalane wala.
+- Local me: host hata do (`localhost`) ya hosts file me `express.local` add karo.
+- Longest path match jeetta hai.
 
 ---
 
-## 08. Enable Kubernetes on Docker Desktop
-
-### Step 1 — Enable in Docker Desktop settings
-
-Open Docker Desktop → click the **gear icon** (Settings) → click **Kubernetes** in the left sidebar → check **Enable Kubernetes** → click **Apply & Restart**.
-
-Wait 2–3 minutes. When the bottom status bar shows a green Kubernetes icon, it is ready.
-
-> 💡 If you have limited RAM, give Docker Desktop at least **4 GB** (Settings → Resources). Kubernetes + several pods + metrics-server will feel slow below that.
-
-### Step 2 — Verify kubectl is working
+## Checkpoint 2: Browser se kholo
 
 ```bash
-kubectl version
-kubectl get nodes
-
-# Expected output:
-NAME             STATUS   ROLES
-docker-desktop   Ready    control-plane ✅
+kubectl apply -f k8s/ingress.yaml
+kubectl get ingress           # ADDRESS dikhna chahiye (localhost)
 ```
 
-### Step 3 — Check current context
-
-```bash
-kubectl config current-context
-# Should return: docker-desktop
-
-kubectl config get-contexts
-# Lists all clusters kubectl knows about
-```
-
-> 💡 The `~/.kube/config` file stores all cluster connection info. When you later create an EKS cluster with eksctl, it adds a new entry here and switches the current context to EKS automatically. Switch back with `kubectl config use-context docker-desktop`.
-
-> ⚠️ **Always check your context before running `apply` or `delete`.** Running a command against the wrong cluster (e.g. production EKS instead of local) is a classic mistake.
-
-### Optional: how local images work
-
-Docker Desktop's Kubernetes shares the **same Docker image store** as your `docker` CLI. So an image built locally with `docker build -t express-k8s:latest .` is instantly visible to Kubernetes — no registry push needed. That's why `imagePullPolicy: IfNotPresent` works locally.
-
-> ⚠️ If an image tag is `:latest` and `imagePullPolicy` is not set, Kubernetes defaults to `Always` and tries to pull from Docker Hub → `ImagePullBackOff`. Always set `IfNotPresent` explicitly for local images (or use a versioned tag like `v1`).
-
----
-
-## 09. Writing YAML Files
-
-> **Key Concept** — Every Kubernetes resource is defined in a YAML file. Each file must have **apiVersion**, **kind**, **metadata**, and **spec**. The `apiVersion` tells Kubernetes which API group the resource belongs to. Different resources live in different groups.
-
-### The four mandatory top-level fields
-
-```yaml
-apiVersion: ...    # which API group/version
-kind: ...          # what type of resource
-metadata:          # name, labels, namespace, annotations
-  name: ...
-spec:              # desired state (shape depends on kind)
-  ...
-```
-
-### apiVersion — which API group
-
-| Resource | apiVersion | Why |
-|---|---|---|
-| Pod, Service, ConfigMap, Secret, Namespace, PVC | `v1` | Core group — the oldest, most fundamental Kubernetes resources. No group prefix needed. |
-| Deployment, ReplicaSet, StatefulSet, DaemonSet | `apps/v1` | Apps group — higher-level workload resources that manage pods. |
-| Ingress, NetworkPolicy | `networking.k8s.io/v1` | Networking group — resources that manage cluster networking. |
-| HorizontalPodAutoscaler | `autoscaling/v2` | Autoscaling group — resources that control scaling behavior. |
-| Job, CronJob | `batch/v1` | Batch group — run-to-completion and scheduled work. |
-
-> 💡 Not sure which apiVersion? Run `kubectl explain deployment` or `kubectl api-resources`.
-
-### Putting multiple resources in one file
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-# ... deployment config
-
----                    # separator — new resource starts here
-
-apiVersion: v1
-kind: Service
-# ... service config
-```
-
-> 💡 Keep files **separate** as your project grows. One file per resource makes it easier to find and edit things. Use `kubectl apply -f k8s/` to apply the entire folder at once.
-
-### Generate YAML instead of typing it
-
-```bash
-# Dry-run prints YAML without creating anything
-kubectl create deployment express --image=express-k8s:latest --dry-run=client -o yaml > deployment.yaml
-kubectl create service clusterip express-service --tcp=80:3000 --dry-run=client -o yaml > service.yaml
-
-# See every field available for a resource
-kubectl explain deployment.spec.template.spec.containers
-```
-
-### Imperative vs Declarative
-
-| Style | Example | Use when |
-|---|---|---|
-| **Imperative** | `kubectl create deployment ...`, `kubectl scale ...` | Quick experiments, learning |
-| **Declarative** | `kubectl apply -f deployment.yaml` | Real projects — YAML in git is the source of truth |
-
-### `apply` vs `create` vs `replace`
-
-| Command | Behavior |
+| Setup | URL |
 |---|---|
-| `kubectl create -f` | Creates; **errors if it already exists** |
-| `kubectl apply -f` | Creates or updates; safe to re-run. **Use this.** |
-| `kubectl replace -f` | Replaces entirely; errors if it doesn't exist |
+| Ingress me host nahi | `http://localhost` |
+| `host: express.local` + hosts file | `http://express.local` |
+| NodePort service | `http://localhost:30001` |
 
-### YAML tips
-
-- Indentation uses **spaces only** (2 spaces), never tabs.
-- Lists use `-`. A list item that's an object: `- name: x` then keys aligned under `name`.
-- Strings with special characters or that look like numbers/bools should be quoted: `"128Mi"`, `"true"`.
-- Validate before applying: `kubectl apply -f file.yaml --dry-run=server`.
+Poora safar ab chal raha hai: **Browser → Ingress Controller → Ingress rule → Service → Pod**. Agar nahi chala to [Chapter 19](#19-debugging-aur-troubleshooting) ka flowchart follow karo.
 
 ---
 
-## 10. Labels & Selectors
-
-> **Key Concept** — **Labels** are key-value tags on pods. **Selectors** are filters used by Deployments and Services to find pods with specific labels. This is how all three resources connect — the Deployment owns pods via selector, the Service routes to pods via selector. No hardcoded pod names or IPs anywhere.
-
-### The three-way connection
-
-```yaml
-# deployment.yaml
-selector:
-  matchLabels:
-    app: express      # (1) Deployment manages pods with this label
-template:
-  metadata:
-    labels:
-      app: express    # (2) Pod gets stamped with this label
-
----
-# service.yaml
-selector:
-  app: express        # (3) Service routes to pods with this label
-```
-
-### Selector matching rules
-
-| Pod Labels | Selector: `app=express` | Result |
-|---|---|---|
-| `app: express` | Matches | ✅ Selected |
-| `app: express, env: prod` | Matches (extra label ignored) | ✅ Selected |
-| `app: backend` | Does not match | ❌ Ignored |
-| `app: express, env: staging` | Matches `app=express` only | ✅ Selected |
-
-### Multiple deployments using labels
-
-```yaml
-# staging-deployment.yaml
-selector:
-  matchLabels:
-    app: express
-    env: staging     # only manages staging pods
-
-# production-deployment.yaml
-selector:
-  matchLabels:
-    app: express
-    env: production  # only manages production pods
-```
-
-Both deployments exist in the same cluster but never interfere with each other because their selectors are different.
-
-### Working with labels from the CLI
-
-```bash
-kubectl get pods --show-labels
-kubectl get pods -l app=express                 # filter by label
-kubectl get pods -l 'env in (staging,prod)'     # set-based selector
-kubectl label pod <pod-name> env=debug          # add a label
-kubectl label pod <pod-name> env-               # remove label "env"
-```
-
-### Labels vs Annotations
-
-| | Labels | Annotations |
-|---|---|---|
-| Purpose | Identify and **select** objects | Attach extra **metadata** |
-| Used by selectors? | Yes | No |
-| Example | `app: express` | `nginx.ingress.kubernetes.io/proxy-body-size: "10m"` |
-
----
+# PART 5 — CONFIGURATION
 
 ## 11. Namespaces
 
-> **Key Concept** — A **Namespace** is a virtual cluster inside your real cluster. It groups resources (pods, services, secrets…) so names don't collide and you can separate environments like `dev`, `staging`, `prod` — or separate projects — on one cluster. If you don't specify one, everything goes in `default`.
+> **Ek line me:** **Namespace** cluster ke andar ka virtual cluster hai. Resources ko group karta hai taaki naam na takrayein aur `dev`, `staging`, `prod` ya alag projects alag rakh sako. Kuch na bolo to sab `default` me jata hai.
 
-### Default namespaces
+### Pehle se maujood namespaces
 
-| Namespace | What lives there |
+| Namespace | Kya rehta hai |
 |---|---|
-| `default` | Your resources, if you don't say otherwise |
-| `kube-system` | Kubernetes system pods (coredns, kube-proxy, metrics-server…) |
-| `kube-public` | Publicly readable data (rarely used) |
-| `kube-node-lease` | Node heartbeats |
-| `ingress-nginx` | Created when you install the ingress controller |
+| `default` | Tumhare resources, agar kuch aur na bolo |
+| `kube-system` | K8s ke system pods (coredns, kube-proxy, metrics-server...) |
+| `kube-public` | Publicly readable data (kam use hota hai) |
+| `kube-node-lease` | Nodes ke heartbeat |
+| `ingress-nginx` | Ingress controller install karne par banta hai |
 
-### Create and use a namespace
+### Banana aur use karna
 
 ```bash
 kubectl create namespace dev
 kubectl get namespaces
 
-kubectl apply -f k8s/ -n dev          # apply into the dev namespace
-kubectl get pods -n dev               # list pods in dev
-kubectl get pods -A                   # pods in ALL namespaces
+kubectl apply -f k8s/ -n dev          # dev namespace me apply
+kubectl get pods -n dev               # dev ke pods
+kubectl get pods -A                   # SAARE namespaces ke pods
 
-# Make dev the default for your current context
+# Current context ka default namespace dev kar do
 kubectl config set-context --current --namespace=dev
 ```
 
-### As YAML
+YAML me:
 
 ```yaml
 apiVersion: v1
@@ -961,7 +1196,7 @@ metadata:
   name: dev
 ```
 
-Or put it directly in a resource:
+Ya resource me seedha:
 
 ```yaml
 metadata:
@@ -969,9 +1204,9 @@ metadata:
   namespace: dev
 ```
 
-### What is and isn't namespaced
+### Kaun namespaced hai, kaun cluster-wide
 
-| Namespaced (isolated per namespace) | Cluster-wide |
+| Namespaced (har namespace me alag) | Cluster-wide |
 |---|---|
 | Pod, Deployment, Service, ConfigMap, Secret, Ingress, PVC, HPA | Node, Namespace, PersistentVolume, StorageClass, IngressClass |
 
@@ -979,10 +1214,10 @@ metadata:
 
 ```
 http://<service>.<namespace>.svc.cluster.local
-e.g. http://express-service.dev.svc.cluster.local
+jaise: http://express-service.dev.svc.cluster.local
 ```
 
-### Limit a namespace's resource usage (optional)
+### Namespace ki resource limit (optional)
 
 ```yaml
 apiVersion: v1
@@ -999,15 +1234,22 @@ spec:
     limits.memory: 4Gi
 ```
 
-> ⚠️ Deleting a namespace **deletes everything inside it**. `kubectl delete namespace dev` is destructive.
+> ⚠️ Namespace delete karne par uske **andar ka sab kuch delete** ho jata hai. `kubectl delete namespace dev` destructive hai.
+
+### Yaad rakho
+- Namespace = virtual cluster, environments aur projects alag karne ke liye.
+- Namespace ke andar Services naam se baat karti hain; bahar se `service.namespace` se.
 
 ---
 
 ## 12. ConfigMap
 
-> **Key Concept** — A **ConfigMap** stores **non-sensitive** configuration (ports, URLs, feature flags, `NODE_ENV`) outside your Docker image. Same image can then run in dev/staging/prod with different configs. Passwords and tokens belong in a **Secret**, not here.
+> **Ek line me:** **ConfigMap** me **non-sensitive** config (port, URL, `NODE_ENV`, feature flags) Docker image se bahar rakhte hain. Ek hi image dev/staging/prod me alag config ke saath chal sakti hai. Password ke liye Secret (agla chapter).
 
-### Create a ConfigMap
+### Kyun chahiye
+Agar `NODE_ENV=production` image me hardcode kar diya to har environment ke liye alag image banani padegi. ConfigMap se image same rehti hai, config alag.
+
+### ConfigMap banao
 
 ```yaml
 # k8s/configmap.yaml
@@ -1022,19 +1264,19 @@ data:
   LOG_LEVEL: "info"
 ```
 
-Or from the CLI:
+Ya CLI se:
 
 ```bash
 kubectl create configmap express-config \
   --from-literal=NODE_ENV=production \
   --from-literal=PORT=3000
 
-kubectl create configmap app-env --from-env-file=.env   # from a .env file (non-secret ones!)
+kubectl create configmap app-env --from-env-file=.env   # .env file se (sirf non-secret wale!)
 ```
 
-### Use it in a Deployment — three ways
+### Deployment me use karne ke 3 tarike
 
-**1. One key at a time**
+**1. Ek-ek key**
 
 ```yaml
 env:
@@ -1045,17 +1287,17 @@ env:
         key: NODE_ENV
 ```
 
-**2. All keys at once (`envFrom`)** — easiest
+**2. Saari keys ek saath (`envFrom`)** — sabse aasan
 
 ```yaml
 envFrom:
   - configMapRef:
       name: express-config
   - secretRef:
-      name: express-secret      # secrets can be bulk-loaded the same way
+      name: express-secret      # Secrets bhi isi tarah bulk me load hote hain
 ```
 
-**3. Mount as files**
+**3. Files ki tarah mount**
 
 ```yaml
 volumeMounts:
@@ -1064,15 +1306,15 @@ volumeMounts:
 volumes:
   - name: config-vol
     configMap:
-      name: express-config      # each key becomes a file in /app/config
+      name: express-config      # har key /app/config me ek file ban jati hai
 ```
 
-### Updating a ConfigMap
+### ConfigMap update karne par kya hota hai
 
-| How it was consumed | After `kubectl apply` of changed ConfigMap |
+| Kaise use kiya tha | Changed ConfigMap ko `apply` karne ke baad |
 |---|---|
-| Env variables | **NOT updated** — restart pods: `kubectl rollout restart deployment/express-deployment` |
-| Mounted file | Updated automatically after a short delay (up to ~1 min) |
+| Env variables | **Update NAHI hota** — pods restart karo: `kubectl rollout restart deployment/express-deployment` |
+| Mounted file | Thodi der me khud update (~1 min tak) |
 
 ### Inspect
 
@@ -1082,31 +1324,39 @@ kubectl describe configmap express-config
 kubectl get configmap express-config -o yaml
 ```
 
+### Yaad rakho
+- ConfigMap = non-secret config, Secret = sensitive.
+- `envFrom` sabse kam typing.
+- Env-based config badalne ke baad pods restart karna padta hai.
+
 ---
 
-## 13. Secrets (Local)
+## 13. Secrets
 
-> **Key Concept** — A **Secret** stores sensitive data like database passwords, API keys, and JWT secrets inside the Kubernetes cluster — encoded in base64. Pods then access these values as environment variables or file mounts. Unlike a ConfigMap (which is for non-sensitive config), Secrets signal to Kubernetes that this data should be handled with care (not logged, RBAC-restricted). In a local Docker Desktop setup secrets are fine as-is; in production you would use external vaults.
+> **Ek line me:** **Secret** DB password, API keys, JWT secrets jaisi sensitive cheezein cluster me (base64 encoded) rakhta hai, aur pods ko env variables ya files ke roop me deta hai.
 
-> ⚠️ **base64 is NOT encryption.** It is just encoding. Anyone with `kubectl get secret` access can decode it. Never commit secret YAML files to git. Use `.gitignore` to exclude them, or use a tool like *sealed-secrets* or *external-secrets* for production.
+### Kyun alag se Secret?
+Secrets ko K8s special treat karta hai (logs me nahi aate, RBAC se restrict ho sakte hain). Local Docker Desktop me plain Secrets theek hain; production me external vaults use karte hain.
 
-### Step 1 — Create base64 values
+> ⚠️ **base64 encryption NAHI hai.** Ye sirf encoding hai. Jiske paas `kubectl get secret` ka access hai wo decode kar lega. Secret YAML kabhi git me commit mat karo. `.gitignore` me daalo, ya production me *sealed-secrets* / *external-secrets* use karo.
+
+### Step 1 — base64 values banao
 
 ```bash
-# Encode any string to base64
+# Koi bhi string base64 me
 echo -n 'mypassword' | base64
 # → bXlwYXNzd29yZA==
 
 echo -n 'mongodb://localhost:27017/mydb' | base64
 # → bW9uZ29kYjovL2xvY2FsaG9zdDoyNzAxNy9teWRi
 
-# Decode to verify
+# Verify karne ke liye decode
 echo 'bXlwYXNzd29yZA==' | base64 --decode
 ```
 
-> Always use `echo -n` (no newline). Without `-n` a hidden `\n` gets encoded and your password silently breaks.
+> Hamesha `echo -n` (bina newline). `-n` ke bina chhupa hua `\n` encode ho jata hai aur password chupchaap kharab ho jata hai.
 
-### Step 2 — Write secret.yaml
+### Step 2 — secret.yaml likho
 
 ```yaml
 # k8s/secret.yaml
@@ -1121,22 +1371,22 @@ data:
   DB_PASSWORD: bXlwYXNzd29yZA==
 ```
 
-> 💡 **Tip — use `stringData` instead of `data`** to write plain text directly (Kubernetes encodes it for you). This is easier for local development but the result is identical in the cluster.
+> 💡 **Tip:** `data` ki jagah **`stringData`** use karo to plain text seedha likh sakte ho (K8s khud encode karta hai). Local me aasan hai, cluster me result same.
 
 ```yaml
-# k8s/secret.yaml — using stringData (plaintext, easier locally)
+# k8s/secret.yaml — stringData ke saath (plaintext, local ke liye aasan)
 apiVersion: v1
 kind: Secret
 metadata:
   name: express-secret
 type: Opaque
-stringData:                  # plain text — k8s base64-encodes automatically
+stringData:                  # plain text — k8s khud base64 kar deta hai
   MONGO_URI: "mongodb://localhost:27017/mydb"
   JWT_SECRET: "mysupersecretkey"
   DB_PASSWORD: "mypassword"
 ```
 
-### Create a secret straight from the CLI (no YAML file, nothing to commit)
+### CLI se banao (koi YAML file nahi, git me commit ka darr nahi)
 
 ```bash
 kubectl create secret generic express-secret \
@@ -1146,20 +1396,20 @@ kubectl create secret generic express-secret \
 kubectl create secret generic app-env --from-env-file=.env.secret
 ```
 
-### Step 3 — Apply the Secret
+### Step 3 — Apply karo
 
 ```bash
 kubectl apply -f k8s/secret.yaml
 
-# Verify it was created
+# Verify
 kubectl get secrets
-kubectl describe secret express-secret   # shows keys but NOT values
+kubectl describe secret express-secret   # keys dikhata hai, values NAHI
 
-# Decode a specific value to verify
+# Ek value decode karke dekho
 kubectl get secret express-secret -o jsonpath='{.data.MONGO_URI}' | base64 --decode
 ```
 
-### Step 4 — Inject Secret into your Deployment as env vars
+### Step 4 — Deployment me env vars ki tarah inject karo
 
 ```yaml
 spec:
@@ -1167,11 +1417,11 @@ spec:
     - name: express
       image: express-k8s:latest
       env:
-        - name: MONGO_URI          # name of env var inside the container
+        - name: MONGO_URI          # container ke andar env var ka naam
           valueFrom:
             secretKeyRef:
-              name: express-secret # secret name from metadata.name
-              key: MONGO_URI         # key inside the secret
+              name: express-secret # secret ka naam (metadata.name)
+              key: MONGO_URI         # secret ke andar ki key
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
@@ -1184,15 +1434,15 @@ spec:
               key: DB_PASSWORD
 ```
 
-### Shortcut — load every key at once
+### Shortcut: saari keys ek saath
 
 ```yaml
 envFrom:
   - secretRef:
-      name: express-secret     # all keys become env vars with the same names
+      name: express-secret     # saari keys same naam ke env vars ban jati hain
 ```
 
-### Mount a Secret as files (e.g. certificates)
+### Secret ko files ki tarah mount karo (certificates ke liye)
 
 ```yaml
 volumeMounts:
@@ -1202,38 +1452,38 @@ volumeMounts:
 volumes:
   - name: secret-vol
     secret:
-      secretName: express-secret   # each key → a file in /etc/secrets
+      secretName: express-secret   # har key → /etc/secrets me ek file
 ```
 
-### Access in your Node.js/Express code
+### Node.js / Express me access
 
 ```js
-// Kubernetes injects secrets as environment variables
+// Kubernetes secrets ko environment variables ki tarah inject karta hai
 const mongoUri   = process.env.MONGO_URI;
 const jwtSecret  = process.env.JWT_SECRET;
 const dbPassword = process.env.DB_PASSWORD;
 
-// Same code works locally with .env and in Kubernetes with Secrets
+// Wahi code local me .env ke saath aur Kubernetes me Secrets ke saath chalta hai
 ```
 
-### Secret vs ConfigMap — when to use which
+### Secret vs ConfigMap: kab kaunsa
 
 | Use case | ConfigMap | Secret |
 |---|---|---|
-| Database password | ❌ Never | ✅ Yes |
-| API base URL | ✅ Yes | Not needed |
-| JWT secret key | ❌ Never | ✅ Yes |
-| `NODE_ENV = production` | ✅ Yes | Not needed |
-| MongoDB connection string | ❌ if it has password | ✅ Yes |
-| Port number | ✅ Yes | Not needed |
+| Database password | ❌ Kabhi nahi | ✅ Haan |
+| API base URL | ✅ Haan | Zaroorat nahi |
+| JWT secret key | ❌ Kabhi nahi | ✅ Haan |
+| `NODE_ENV = production` | ✅ Haan | Zaroorat nahi |
+| MongoDB connection string | ❌ agar password hai | ✅ Haan |
+| Port number | ✅ Haan | Zaroorat nahi |
 
 ### Secret types
 
-| Type | Used for |
+| Type | Kis kaam ka |
 |---|---|
 | `Opaque` | Generic key-value (default) |
-| `kubernetes.io/tls` | TLS cert + key (for Ingress HTTPS) |
-| `kubernetes.io/dockerconfigjson` | Credentials to pull from a private registry (ECR, Docker Hub) |
+| `kubernetes.io/tls` | TLS cert + key (Ingress HTTPS ke liye) |
+| `kubernetes.io/dockerconfigjson` | Private registry (ECR, Docker Hub) se pull ke credentials |
 
 ```bash
 # Private registry pull secret
@@ -1248,7 +1498,7 @@ spec:
     - name: regcred
 ```
 
-### Add secret.yaml to your project structure
+### Project structure (secret ke saath)
 
 ```
 your-project/
@@ -1261,55 +1511,65 @@ your-project/
     ├── service.yaml
     ├── ingress.yaml
     ├── hpa.yaml
-    └── secret.yaml       # ← add to .gitignore !
+    └── secret.yaml       # ← .gitignore me daalo!
 ```
 
-> ⚠️ **Always add secret.yaml to .gitignore.** Committing secrets to git — even encoded base64 — is a serious security risk. Add `k8s/secret.yaml` to your `.gitignore` file. Share secrets with teammates via a secure channel (1Password, Bitwarden, private Slack DM), never via git.
+> ⚠️ **`secret.yaml` hamesha `.gitignore` me.** Base64 me bhi git me commit karna bada security risk hai. `.gitignore` me `k8s/secret.yaml` likho. Teammates ko secrets secure channel (1Password, Bitwarden, private DM) se do, git se kabhi nahi.
 
 ### Apply order matters
 
 ```bash
-# 1. Secret (and ConfigMap) must exist before pods that reference them start up
+# 1. Secret (aur ConfigMap) pehle — jin pods me reference hai unke start hone se pehle
 kubectl apply -f k8s/secret.yaml
 kubectl apply -f k8s/configmap.yaml
 
-# 2. Then apply deployment (pods can now find the secret)
+# 2. Phir deployment (ab pods ko secret mil jayega)
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
 
-# Verify env vars were injected into the pod
+# Verify: env vars pod me aaye ya nahi
 kubectl exec -it <pod-name> -- sh
-# Inside pod:
+# Pod ke andar:
 echo $MONGO_URI
 echo $JWT_SECRET
 ```
 
-> If a pod references a missing Secret/ConfigMap it gets stuck in **`CreateContainerConfigError`**. Create the secret, and the pod recovers on its own.
+### Galtiyan
+- Pod me missing Secret/ConfigMap/key ka reference → pod **`CreateContainerConfigError`** me atakta hai. Secret bana do, pod khud recover ho jata hai.
+- Secret change karne par env vars **refresh nahi hote** → `kubectl rollout restart deployment/express-deployment`.
 
-> Secrets mounted as env vars are **not** refreshed when the Secret changes — run `kubectl rollout restart deployment/express-deployment`.
+### Yaad rakho
+- Secret = sensitive config, base64 sirf encoding hai.
+- Secret/ConfigMap **pehle** apply karo, Deployment baad me.
+- `secret.yaml` kabhi git me nahi.
 
 ---
 
+# PART 6 — RELIABILITY
+
 ## 14. Health Probes
 
-> **Key Concept** — Kubernetes can't know if your app is actually healthy just because the container process is running. **Probes** are small checks (HTTP request, TCP connect, or command) that tell Kubernetes whether to restart a container or send it traffic.
+> **Ek line me:** **Probes** chhote health checks hain (HTTP / TCP / command) jinse K8s jaanta hai ki container sach me theek hai ya nahi, aur kab restart karna hai ya traffic dena hai.
 
-### The three probes
+### Kyun chahiye
+Container ka process chal raha hai ka matlab ye nahi ki app theek hai. Ho sakta hai app hang ho gayi, ya abhi DB se connect hi nahi hui. K8s ko ye bahar se dikhta nahi — isliye probes.
 
-| Probe | Question it answers | If it fails |
+### Teen probes
+
+| Probe | Sawaal | Fail hone par |
 |---|---|---|
-| **startupProbe** | Has the app finished starting? | Keep waiting; kill after too many failures. Disables the other two until it passes. |
-| **readinessProbe** | Can this pod take traffic *right now*? | Pod removed from Service endpoints (**no restart**) |
-| **livenessProbe** | Is the app stuck/dead? | Container is **restarted** |
+| **startupProbe** | App start ho chuki hai? | Intezaar karta hai; bahut fail ho to kill. Pass hone tak baaki do band. |
+| **readinessProbe** | Abhi pod traffic le sakta hai? | Pod Service endpoints se **hata diya jata hai** (restart **nahi**) |
+| **livenessProbe** | App atak/mar gayi? | Container **restart** hota hai |
 
-### Add a health endpoint to Express
+### Express me health endpoints
 
 ```js
 app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 ```
 
-For readiness, check real dependencies:
+Readiness me asli dependencies check karo:
 
 ```js
 app.get("/ready", async (req, res) => {
@@ -1318,7 +1578,7 @@ app.get("/ready", async (req, res) => {
 });
 ```
 
-### Probes in deployment.yaml
+### deployment.yaml me probes
 
 ```yaml
 containers:
@@ -1330,7 +1590,7 @@ containers:
       httpGet:
         path: /health
         port: 3000
-      failureThreshold: 30       # 30 × 2s = up to 60s to start
+      failureThreshold: 30       # 30 × 2s = start hone ke liye 60s tak
       periodSeconds: 2
     readinessProbe:
       httpGet:
@@ -1350,18 +1610,18 @@ containers:
 
 ### Probe fields
 
-| Field | Meaning |
+| Field | Matlab |
 |---|---|
-| `initialDelaySeconds` | Wait this long after container start before first check |
-| `periodSeconds` | How often to check |
-| `timeoutSeconds` | How long to wait for a response (default 1s) |
-| `failureThreshold` | Consecutive failures before acting |
-| `successThreshold` | Consecutive successes to be considered healthy again |
+| `initialDelaySeconds` | Container start ke baad pehla check kab |
+| `periodSeconds` | Kitni der me ek baar check |
+| `timeoutSeconds` | Response ka kitna intezaar (default 1s) |
+| `failureThreshold` | Kitne lagataar fail ke baad action |
+| `successThreshold` | Wapas healthy maanne ke liye kitne lagataar success |
 
-### Other probe types
+### Dusre probe types
 
 ```yaml
-# TCP — just check the port accepts connections
+# TCP — bas port connection accept karta hai ya nahi
 livenessProbe:
   tcpSocket:
     port: 3000
@@ -1372,52 +1632,56 @@ livenessProbe:
     command: ["cat", "/tmp/healthy"]
 ```
 
-> ⚠️ **Don't check external dependencies in the liveness probe.** If MongoDB goes down and liveness fails, Kubernetes restarts *all* your pods for no reason. Put dependency checks in **readiness**; keep liveness simple (is the process responsive?).
+> ⚠️ **Liveness probe me external dependencies check mat karo.** MongoDB down hua aur liveness fail hui to K8s tumhare **saare pods restart** kar dega, bina wajah. Dependency check **readiness** me, liveness simple rakho (process respond kar raha hai?).
 
-> 💡 Readiness is what makes **rolling updates zero-downtime** — a new pod only gets traffic once its readiness probe passes.
+> 💡 Readiness hi **rolling update ko zero-downtime** banata hai — naya pod tabhi traffic pata hai jab uski readiness pass ho.
+
+### Yaad rakho
+- Readiness = traffic dena ya nahi. Liveness = restart karna ya nahi. Startup = slow start ko time dena.
+- Liveness simple, readiness me DB check.
 
 ---
 
-## 15. Rolling Updates & Rollbacks
+## 15. Rolling Updates aur Rollback
 
-> **Key Concept** — When you change the pod template (image, env, resources), the Deployment creates a **new ReplicaSet** and gradually shifts pods from old to new. You control how aggressive this is with the update strategy.
+> **Ek line me:** Pod template badalte hi (image, env, resources) Deployment **naya ReplicaSet** banata hai aur pods ko dheere-dheere purane se naye me shift karta hai. Kitni tezi se — ye strategy se control hota hai.
 
 ### Strategy settings
 
 ```yaml
 spec:
   replicas: 4
-  revisionHistoryLimit: 5          # how many old ReplicaSets to keep for rollback
+  revisionHistoryLimit: 5          # rollback ke liye kitne purane ReplicaSets rakhne hain
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1                  # can create 1 extra pod above desired during update
-      maxUnavailable: 0            # never drop below desired count → zero downtime
+      maxSurge: 1                  # update ke dauran desired se 1 extra pod allowed
+      maxUnavailable: 0            # kabhi desired count se neeche nahi → zero downtime
 ```
 
-| Field | Meaning |
+| Field | Matlab |
 |---|---|
-| `maxSurge` | How many pods *above* `replicas` are allowed during update (number or %) |
-| `maxUnavailable` | How many pods may be *down* during update (number or %) |
-| `type: Recreate` | Kill all old pods first, then start new ones (has downtime — used when two versions can't coexist) |
+| `maxSurge` | Update ke dauran `replicas` se **upar** kitne extra pods allowed (number ya %) |
+| `maxUnavailable` | Update ke dauran kitne pods **down** ho sakte hain (number ya %) |
+| `type: Recreate` | Pehle saare purane pods maro, phir naye banao (downtime hota hai — jab do versions saath nahi chal sakte) |
 
-### What a rolling update looks like (replicas: 3, maxSurge 1, maxUnavailable 0)
+### Rolling update kaisa dikhta hai (replicas: 3, maxSurge 1, maxUnavailable 0)
 
 ```
-Old: [v1][v1][v1]
-Step 1: [v1][v1][v1] + [v2 starting]
-Step 2: [v1][v1][v2 ready] → kill one v1
-Step 3: [v1][v2][v2] + [v2 starting] → ...
-Done:   [v2][v2][v2]
+Pehle:  [v1][v1][v1]
+Step 1: [v1][v1][v1] + [v2 start ho raha]
+Step 2: [v1][v1][v2 ready] → ek v1 maro
+Step 3: [v1][v2][v2] + [v2 start ho raha] → ...
+Final:  [v2][v2][v2]
 ```
 
 ### Trigger, watch, rollback
 
 ```bash
-# Update image (or just edit YAML and apply)
+# Image update (ya YAML edit karke apply)
 kubectl set image deployment/express-deployment express=express-k8s:v2
 
-# Watch progress
+# Progress dekho
 kubectl rollout status deployment/express-deployment
 
 # History
@@ -1425,26 +1689,26 @@ kubectl rollout history deployment/express-deployment
 kubectl rollout history deployment/express-deployment --revision=2
 
 # Rollback
-kubectl rollout undo deployment/express-deployment                  # to previous
-kubectl rollout undo deployment/express-deployment --to-revision=1  # to a specific one
+kubectl rollout undo deployment/express-deployment                  # pichhle par
+kubectl rollout undo deployment/express-deployment --to-revision=1  # kisi specific par
 
-# Pause / resume (batch several changes into a single rollout)
+# Pause / resume (kai changes ek hi rollout me)
 kubectl rollout pause deployment/express-deployment
 kubectl rollout resume deployment/express-deployment
 ```
 
-### Use version tags, not just `:latest`
+### `:latest` ki jagah version tags use karo
 
 ```bash
 docker build -t express-k8s:v1 .
 docker build -t express-k8s:v2 .
 ```
 
-With `:latest`, Kubernetes sees *no change* in the YAML, so `kubectl apply` does nothing — you must run `rollout restart`. With unique tags, changing the tag in YAML automatically triggers a rollout and makes rollback meaningful.
+`:latest` ke saath YAML me **koi change dikhta hi nahi**, isliye `kubectl apply` kuch nahi karta — tumhe `rollout restart` chalana padta hai. Unique tags me YAML ka tag badalte hi rollout khud trigger hota hai aur rollback ka matlab bhi banta hai.
 
-### Graceful shutdown (so in-flight requests don't die)
+### Graceful shutdown (chalti requests na tootein)
 
-Kubernetes sends `SIGTERM`, waits `terminationGracePeriodSeconds` (default 30s), then `SIGKILL`.
+K8s pehle `SIGTERM` bhejta hai, `terminationGracePeriodSeconds` (default 30s) tak rukta hai, phir `SIGKILL`.
 
 ```js
 process.on("SIGTERM", () => {
@@ -1460,20 +1724,25 @@ spec:
   terminationGracePeriodSeconds: 30
 ```
 
+### Yaad rakho
+- Zero downtime = `maxUnavailable: 0` + readiness probe.
+- `rollout undo` se ek command me wapas.
+- Versioned tags use karo, `:latest` nahi.
+
 ---
 
-## 16. Volumes & Persistent Storage
+## 16. Volumes aur Persistent Storage
 
-> **Key Concept** — A container's filesystem disappears when the pod is deleted or restarted. For temporary scratch space or for data that must survive (MongoDB, uploads), you attach a **Volume**.
+> **Ek line me:** Container ka filesystem pod delete/restart par gayab ho jata hai. Jo data bachana hai (MongoDB, uploads) uske liye **Volume** lagao.
 
-### Volume types you'll meet
+### Volume types
 
-| Type | Lifetime | Use case |
+| Type | Kab tak rehta hai | Use case |
 |---|---|---|
-| `emptyDir` | Lives as long as the **pod** | Scratch space, sharing files between containers in a pod |
-| `hostPath` | Lives on the **node's disk** | Local dev only (mount a folder from your machine). Avoid in production. |
-| `configMap` / `secret` | Config as files | See ConfigMap / Secret sections |
-| **PersistentVolumeClaim** | Lives **beyond the pod** | Databases, uploads — real persistence |
+| `emptyDir` | Jab tak **pod** hai | Scratch space, pod ke containers ke beech files share |
+| `hostPath` | Node ki **disk** par | Sirf local dev (apni machine ka folder mount). Production me avoid. |
+| `configMap` / `secret` | Config files ki tarah | ConfigMap / Secret chapters dekho |
+| **PersistentVolumeClaim** | Pod ke **baad bhi** | Database, uploads — asli persistence |
 
 ### emptyDir
 
@@ -1489,20 +1758,20 @@ spec:
       emptyDir: {}
 ```
 
-### PV, PVC, StorageClass — how persistence works
+### PV, PVC, StorageClass kaise judte hain
 
 ```
-Pod  →  PersistentVolumeClaim (PVC)  →  PersistentVolume (PV)  →  actual disk
-        "I need 1Gi"                    "here's 1Gi"
+Pod  →  PersistentVolumeClaim (PVC)  →  PersistentVolume (PV)  →  asli disk
+        "mujhe 1Gi chahiye"             "ye lo 1Gi"
                           ↑
-                    StorageClass auto-creates the PV on demand (dynamic provisioning)
+          StorageClass ye PV demand par khud bana deti hai (dynamic provisioning)
 ```
 
-| Object | Who creates | Meaning |
+| Object | Kaun banata hai | Matlab |
 |---|---|---|
-| **PersistentVolume (PV)** | Admin or StorageClass (automatically) | A piece of storage in the cluster |
-| **PersistentVolumeClaim (PVC)** | You | A request for storage: size + access mode |
-| **StorageClass** | Cluster | Defines *how* storage gets provisioned. Docker Desktop has a default (`hostpath`) |
+| **PersistentVolume (PV)** | Admin ya StorageClass (automatic) | Cluster me storage ka ek tukda |
+| **PersistentVolumeClaim (PVC)** | Tum | Storage ki maang: size + access mode |
+| **StorageClass** | Cluster | Storage **kaise** banega ye define karti hai. Docker Desktop me default (`hostpath`) hoti hai |
 
 ### PVC example
 
@@ -1514,7 +1783,7 @@ metadata:
   name: mongo-pvc
 spec:
   accessModes:
-    - ReadWriteOnce          # mounted read-write by ONE node
+    - ReadWriteOnce          # ek node read-write me mount kar sakta hai
   resources:
     requests:
       storage: 1Gi
@@ -1526,7 +1795,7 @@ kubectl get pvc
 kubectl get pv
 ```
 
-### Use the PVC in a pod
+### Pod me PVC use karna
 
 ```yaml
 containers:
@@ -1543,119 +1812,47 @@ volumes:
 
 ### Access modes
 
-| Mode | Meaning |
+| Mode | Matlab |
 |---|---|
-| `ReadWriteOnce` (RWO) | One node can mount read-write |
-| `ReadOnlyMany` (ROX) | Many nodes, read-only |
-| `ReadWriteMany` (RWX) | Many nodes read-write (needs special storage like NFS/EFS) |
+| `ReadWriteOnce` (RWO) | Ek node read-write mount kar sakta hai |
+| `ReadOnlyMany` (ROX) | Kai nodes, sirf read |
+| `ReadWriteMany` (RWX) | Kai nodes read-write (NFS/EFS jaisi special storage chahiye) |
 
-> ⚠️ Deleting a PVC may delete the data (depends on the PV's reclaim policy; the dynamic default is usually `Delete`).
+> ⚠️ PVC delete karne se data bhi ja sakta hai (PV ki reclaim policy par depend; dynamic ka default aam taur par `Delete`).
 
-> 💡 For production databases prefer a **managed service** (MongoDB Atlas, RDS, ElastiCache). Running databases in Kubernetes is fine for local learning but operationally hard in production.
+> 💡 Production databases ke liye **managed service** (MongoDB Atlas, RDS, ElastiCache) behtar hai. K8s me DB chalana local seekhne ke liye theek hai, production me operationally mushkil.
+
+### Yaad rakho
+- Container ka data pod ke saath jata hai; bachana ho to PVC.
+- Pod → PVC → PV → disk. StorageClass PV khud banati hai.
 
 ---
 
-## 17. Deploy Your App
+# PART 7 — REAL PROJECT
 
-### Step 1 — Build Docker image
+## 17. Poora MERN stack Kubernetes par
 
-```bash
-cd Backend/
-docker build -t express-k8s:latest .
-```
-
-A minimal `dockerfile` for the Express app:
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
-
-Add a `.dockerignore`:
-
-```
-node_modules
-.env
-.git
-k8s
-```
-
-> The app must listen on `0.0.0.0` (or just `app.listen(3000)`), not only `127.0.0.1`, or the Service can't reach it.
-
-### Step 2 — Apply all YAML files
-
-```bash
-kubectl apply -f k8s/    # applies all files in the k8s folder
-
-# Or apply individually:
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/ingress.yaml
-```
-
-### Step 3 — Verify everything is running
-
-```bash
-kubectl get pods           # STATUS: Running, READY: 1/1
-kubectl get services       # service exists with correct ports
-kubectl get ingress        # ingress has an ADDRESS
-```
-
-### Step 4 — Access in browser
-
-| Setup | URL |
-|---|---|
-| No host in ingress | `http://localhost` |
-| `host: express.local` (with hosts file) | `http://express.local` |
-| NodePort service | `http://localhost:30001` |
-
-### Update your app
-
-```bash
-# 1. Rebuild image after code changes
-docker build -t express-k8s:latest .
-
-# 2. Restart deployment to use new image
-kubectl rollout restart deployment/express-deployment
-```
-
-### Delete what you deployed
-
-```bash
-kubectl delete -f k8s/                              # delete everything defined in the folder
-kubectl delete deployment express-deployment        # delete one resource
-```
-
----
-
-## 18. Full MERN Stack on Local Kubernetes
-
-> **Key Concept** — Real apps have multiple parts. Each part gets its own Deployment + Service, and they talk to each other using **service names**. Only the Ingress is exposed outside.
+> **Ek line me:** Asli app me kai hisse hote hain. Har hissa apna **Deployment + Service** hota hai, aur sab ek dusre ko **service naam** se dhundhte hain. Bahar sirf **Ingress** khula hota hai.
 
 ### Target architecture
 
 ```
-                       http://localhost
-                              │
-                    ┌─────────▼─────────┐
-                    │  Ingress (nginx)  │
-                    └───┬───────────┬───┘
-                 /      │           │   /api
-              ┌─────────▼──┐   ┌────▼──────────┐
-              │ frontend   │   │ backend       │
-              │ (React +   │   │ (Express)     │
-              │  nginx)    │   │ svc: backend  │
-              └────────────┘   └───┬───────┬───┘
-                                   │       │
-                          ┌────────▼──┐ ┌──▼────────┐
-                          │ mongo     │ │ redis     │
-                          │ + PVC     │ │           │
-                          └───────────┘ └───────────┘
+                      http://localhost
+                             │
+                   ┌─────────▼─────────┐
+                   │  Ingress (nginx)  │
+                   └───┬───────────┬───┘
+                /      │           │   /api
+             ┌─────────▼──┐   ┌────▼──────────┐
+             │ frontend   │   │ backend       │
+             │ (React +   │   │ (Express)     │
+             │  nginx)    │   │ svc: backend  │
+             └────────────┘   └───┬───────┬───┘
+                                  │       │
+                         ┌────────▼──┐ ┌──▼────────┐
+                         │ mongo     │ │ redis     │
+                         │ + PVC     │ │           │
+                         └───────────┘ └───────────┘
 ```
 
 ### Folder layout
@@ -1675,7 +1872,7 @@ your-project/
     └── ingress.yaml
 ```
 
-### MongoDB (PVC + Deployment + Service in one file)
+### MongoDB (PVC + Deployment + Service ek file me)
 
 ```yaml
 # k8s/mongo.yaml
@@ -1694,7 +1891,7 @@ kind: Deployment
 metadata:
   name: mongo
 spec:
-  replicas: 1                      # a single mongod — do NOT scale this
+  replicas: 1                      # ek hi mongod — isko scale MAT karo
   selector:
     matchLabels:
       app: mongo
@@ -1719,7 +1916,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo                      # ← this becomes the hostname
+  name: mongo                      # ← yahi hostname ban jata hai
 spec:
   selector:
     app: mongo
@@ -1764,14 +1961,14 @@ spec:
       targetPort: 6379
 ```
 
-### Connection strings inside the cluster
+### Cluster ke andar connection strings
 
 ```
-MONGO_URI = mongodb://mongo:27017/mydb       # "mongo" = Service name
-REDIS_URL = redis://redis:6379               # "redis" = Service name
+MONGO_URI = mongodb://mongo:27017/mydb       # "mongo" = Service ka naam
+REDIS_URL = redis://redis:6379               # "redis" = Service ka naam
 ```
 
-Put these in the ConfigMap / Secret — **not** `localhost`.
+Inhe ConfigMap / Secret me rakho — `localhost` **nahi**.
 
 ### Backend
 
@@ -1821,7 +2018,7 @@ spec:
       targetPort: 3000
 ```
 
-### Frontend (React build served by nginx)
+### Frontend (React build, nginx se serve)
 
 ```dockerfile
 # Frontend/dockerfile — multi-stage build
@@ -1830,11 +2027,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build            # outputs dist/ (Vite) or build/ (CRA)
+RUN npm run build            # dist/ (Vite) ya build/ (CRA) banata hai
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-# SPA fallback so React Router routes work on refresh
+# SPA fallback taaki React Router ke routes refresh par bhi chalein
 RUN printf 'server {\n  listen 80;\n  location / {\n    root /usr/share/nginx/html;\n    try_files $uri /index.html;\n  }\n}\n' > /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```
@@ -1874,9 +2071,9 @@ spec:
       targetPort: 80
 ```
 
-> ⚠️ React runs in the **user's browser**, not inside the cluster. It can't call `http://backend` (that name only exists inside the cluster). Have the frontend call a relative path like `/api/...` and let the Ingress route `/api` to the backend.
+> ⚠️ **Bahut common galti:** React **user ke browser** me chalta hai, cluster ke andar nahi. Wo `http://backend` call nahi kar sakta (ye naam sirf cluster ke andar exist karta hai). Frontend se relative path `/api/...` call karo aur Ingress `/api` ko backend par route karega.
 
-### Ingress — one entry point for both
+### Ingress: dono ke liye ek entry point
 
 ```yaml
 # k8s/ingress.yaml
@@ -1903,15 +2100,15 @@ spec:
                 port: { number: 80 }
 ```
 
-nginx picks the **longest matching path**, so `/api/...` goes to backend and everything else goes to frontend.
+nginx **sabse lamba matching path** chunta hai, isliye `/api/...` backend par jata hai aur baaki sab frontend par.
 
-### Deploy it all in the right order
+### Sahi order me deploy
 
 ```bash
 docker build -t express-k8s:latest ./Backend
 docker build -t frontend-k8s:latest ./Frontend
 
-kubectl apply -f k8s/namespace.yaml        # if using one
+kubectl apply -f k8s/namespace.yaml        # agar namespace use kar rahe ho
 kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
 kubectl apply -f k8s/mongo.yaml -f k8s/redis.yaml
 kubectl apply -f k8s/backend.yaml -f k8s/frontend.yaml
@@ -1920,13 +2117,22 @@ kubectl apply -f k8s/ingress.yaml
 kubectl get all
 ```
 
-> 💡 Pods start in any order. If the backend starts before Mongo is ready it may crash and restart a few times — that's normal. Make your app **retry the DB connection**, and use a readiness probe.
+> 💡 Pods kisi bhi order me start hote hain. Backend Mongo se pehle start ho gaya to crash hokar kuch baar restart ho sakta hai — ye normal hai. App me **DB connection retry** rakho aur readiness probe lagao.
+
+### Yaad rakho
+- Har hissa = Deployment + Service. Naam hi hostname hai (`mongo`, `redis`, `backend`).
+- Frontend browser me chalta hai → `/api` relative path + Ingress.
+- Mongo `replicas: 1` hi rakho aur PVC lagao.
 
 ---
 
-## 19. kubectl Essentials & Port-Forward
+# PART 8 — OPERATE KARNA
 
-### Anatomy of a command
+## 18. kubectl daily use
+
+> **Ek line me:** `kubectl <verb> <resource> <name> <flags>` — itna format yaad rakho, baaki commands is pattern ke variations hain.
+
+### Command ki anatomy
 
 ```
 kubectl  <verb>   <resource>   <name>        <flags>
@@ -1936,44 +2142,44 @@ kubectl  delete   deployment   express-deployment
 
 ### Common verbs
 
-| Verb | What it does |
+| Verb | Kya karta hai |
 |---|---|
-| `get` | List resources |
-| `describe` | Detailed info + events |
-| `apply` / `create` | Create or update from file |
-| `delete` | Remove a resource |
+| `get` | Resources ki list |
+| `describe` | Detail + events |
+| `apply` / `create` | File se banao ya update |
+| `delete` | Resource hatao |
 | `logs` | Container output |
-| `exec` | Run a command in a container |
-| `edit` | Open live resource in your editor |
-| `scale` | Change replicas |
-| `rollout` | Manage Deployment rollouts |
-| `port-forward` | Tunnel a local port to a pod/service |
-| `top` | CPU/memory usage (needs metrics-server) |
-| `explain` | Documentation for any field |
+| `exec` | Container me command chalao |
+| `edit` | Live resource ko editor me kholo |
+| `scale` | Replicas badlo |
+| `rollout` | Deployment rollouts manage |
+| `port-forward` | Local port ko pod/service se jodo |
+| `top` | CPU/memory usage (metrics-server chahiye) |
+| `explain` | Kisi bhi field ka documentation |
 
 ### Output formats
 
 ```bash
 kubectl get pods -o wide                 # extra columns (IP, node)
-kubectl get pods -o yaml                 # full YAML
+kubectl get pods -o yaml                 # poori YAML
 kubectl get pod <name> -o json
-kubectl get pods -o name                 # just names
-kubectl get pods -w                      # watch live
+kubectl get pods -o name                 # sirf naam
+kubectl get pods -w                      # live watch
 kubectl get pods --sort-by=.metadata.creationTimestamp
 kubectl get svc express-service -o jsonpath='{.spec.clusterIP}'
 ```
 
-### Port-forward — reach anything without Ingress
+### Port-forward: Ingress ke bina kuch bhi kholo
 
 ```bash
 kubectl port-forward pod/<pod-name> 8080:3000          # localhost:8080 → pod:3000
 kubectl port-forward svc/express-service 8080:80       # localhost:8080 → service:80
-kubectl port-forward svc/mongo 27017:27017             # connect MongoDB Compass to localhost:27017
+kubectl port-forward svc/mongo 27017:27017             # MongoDB Compass ko localhost:27017 se jodo
 ```
 
-Great for debugging a service directly, or opening your in-cluster Mongo with Compass. Press `Ctrl+C` to stop.
+Service ko seedha debug karne ya cluster ke Mongo ko Compass se kholne ke liye bahut kaam ka. Band karne ke liye `Ctrl+C`.
 
-### Copy files in and out of a pod
+### Pod se files copy karna
 
 ```bash
 kubectl cp <pod-name>:/app/logs/app.log ./app.log
@@ -1983,28 +2189,28 @@ kubectl cp ./config.json <pod-name>:/app/config.json
 ### Temporary debug pod
 
 ```bash
-# Throwaway pod with curl/nslookup — deleted when you exit
+# curl/nslookup wala throwaway pod — exit karte hi delete
 kubectl run debug --rm -it --image=busybox:1.36 -- sh
-# inside:
+# andar:
 nslookup express-service
 wget -qO- http://express-service/health
 
-# Or with curl available
+# curl chahiye to
 kubectl run curl --rm -it --image=curlimages/curl -- sh
 ```
 
-### Edit a live resource
+### Live resource edit
 
 ```bash
 kubectl edit deployment express-deployment
 ```
 
-> Changes made this way are **not** in your YAML files — update the file too or the next `apply` will overwrite them.
+> Is tarah ke changes tumhari YAML files me **nahi** jaate — YAML bhi update karo, nahi to agla `apply` unhe overwrite kar dega.
 
-### Shell shortcuts
+### Shortcuts
 
 ```bash
-# Short resource names
+# Chhote resource naam
 kubectl get po          # pods
 kubectl get svc         # services
 kubectl get deploy      # deployments
@@ -2015,124 +2221,152 @@ kubectl get ns          # namespaces
 kubectl get hpa         # horizontal pod autoscalers
 kubectl get pvc         # persistent volume claims
 
-# Alias k for kubectl (add to ~/.zshrc or ~/.bashrc)
+# kubectl ke liye alias k (~/.zshrc ya ~/.bashrc me)
 alias k=kubectl
 ```
 
+### Yaad rakho
+- Verb + resource + name pattern.
+- `-o wide`, `-o yaml`, `-w` sabse zyada kaam aate hain.
+- `port-forward` aur `kubectl run --rm -it` debugging ke dost.
+
 ---
 
-## 20. Debug Commands & Troubleshooting
+## 19. Debugging aur Troubleshooting
 
-### Common errors and what to do
+> **Ek line me:** Debugging ka ek hi rasta hai: **upar se neeche** chalo — Pods → Endpoints → Service → Ingress. Jahan atke wahin problem hai.
 
-| Error | Cause | Debug command |
+### Systematic flowchart
+
+```
+App reachable nahi?
+│
+├─ 1. kubectl get pods
+│     ├─ Pending            → describe pod (resources? PVC? image?)
+│     ├─ ImagePullBackOff   → image naam/tag? local me bana hai? pullPolicy?
+│     ├─ CrashLoopBackOff   → kubectl logs --previous (app error?)
+│     ├─ Running 0/1        → readiness probe fail → describe pod
+│     └─ Running 1/1 ✅     → step 2
+│
+├─ 2. kubectl get endpoints <service>
+│     ├─ <none>             → Service selector ≠ Pod labels
+│     └─ IPs dikh rahe ✅   → step 3
+│
+├─ 3. kubectl port-forward svc/<service> 8080:80 → curl localhost:8080
+│     ├─ fail               → targetPort galat / app galat port ya 127.0.0.1 par sun rahi
+│     └─ chal gaya ✅       → Service theek hai, problem Ingress me → step 4
+│
+└─ 4. kubectl describe ingress + ingress controller logs
+      ├─ 404                → host/path mismatch, galat ingressClassName
+      ├─ 503                → backend service naam/port galat
+      └─ ADDRESS nahi       → controller install nahi / chal nahi raha
+```
+
+### Common errors aur kya karein
+
+| Error | Wajah | Debug command |
 |---|---|---|
-| **ImagePullBackOff** / **ErrImagePull** | Cannot pull Docker image. Usually local image not built or wrong name/tag. | `kubectl describe pod <name>` → check Events section |
-| **CrashLoopBackOff** | Container keeps crashing. App has a startup error. | `kubectl logs <pod-name> --previous` → see app error output |
-| **CreateContainerConfigError** | Referenced Secret/ConfigMap/key doesn't exist. | `kubectl describe pod <name>` → Events; create the missing secret |
-| **OOMKilled** | Container exceeded memory limit. | `kubectl describe pod <name>` → Last State: OOMKilled; raise `limits.memory` or fix leak |
-| **503 Service Unavailable** | Ingress controller running but no pods found. Label mismatch or pods not ready. | `kubectl get endpoints <service>` → if `<none>` labels don't match |
-| **502 Bad Gateway** | Ingress reached the pod but app crashed/refused, or wrong targetPort. | Check `targetPort`, pod logs, ingress controller logs |
-| **404 Not Found** | nginx running but no matching ingress rule for that host/path. | `kubectl describe ingress <name>` → check rules |
-| **Pending (pod)** | No node has enough CPU/memory to schedule the pod. | `kubectl describe pod <name>` → check Events |
-| **Pending (PVC)** | No StorageClass / can't provision volume. | `kubectl describe pvc <name>` |
-| **ECONNREFUSED** | Pod calling another service using `localhost` instead of service name. | Use `http://service-name` not `http://localhost:PORT` |
-| **Evicted** | Node ran low on resources. | `kubectl describe pod <name>`; set proper requests/limits |
-| **Running but 0/1 READY** | Readiness probe failing. | `kubectl describe pod <name>` → probe failure events |
+| **ImagePullBackOff / ErrImagePull** | Docker image pull nahi ho rahi. Aksar local image bani nahi ya naam/tag galat. | `kubectl describe pod <name>` → Events section |
+| **CrashLoopBackOff** | Container baar-baar crash. App me startup error. | `kubectl logs <pod-name> --previous` |
+| **CreateContainerConfigError** | Reference kiya Secret/ConfigMap/key exist nahi karta. | `kubectl describe pod <name>` → Events; missing secret banao |
+| **OOMKilled** | Container ne memory limit cross ki. | `kubectl describe pod <name>` → Last State: OOMKilled; `limits.memory` badhao ya leak theek karo |
+| **503 Service Unavailable** | Ingress controller chal raha hai par pods nahi mile. Label mismatch ya pods ready nahi. | `kubectl get endpoints <service>` → `<none>` to labels match nahi |
+| **502 Bad Gateway** | Ingress pod tak pahuncha par app crash/refuse, ya targetPort galat. | `targetPort`, pod logs, ingress controller logs dekho |
+| **404 Not Found** | nginx chal raha hai par us host/path ka rule nahi. | `kubectl describe ingress <name>` → rules dekho |
+| **Pending (pod)** | Kisi node par pod ke liye CPU/memory nahi. | `kubectl describe pod <name>` → Events |
+| **Pending (PVC)** | StorageClass nahi / volume provision nahi ho paya. | `kubectl describe pvc <name>` |
+| **ECONNREFUSED** | Pod dusri service ko `localhost` se call kar raha hai. | `http://service-name` use karo, `http://localhost:PORT` nahi |
+| **Evicted** | Node ke resources kam pad gaye. | `kubectl describe pod <name>`; sahi requests/limits set karo |
+| **Running par 0/1 READY** | Readiness probe fail ho rahi. | `kubectl describe pod <name>` → probe failure events |
 
 ### Essential debug commands
 
 ```bash
-# Check what is running
+# Kya chal raha hai
 kubectl get pods
 kubectl get services
 kubectl get ingress
-kubectl get all                              # everything at once
-kubectl get events --sort-by=.lastTimestamp  # recent cluster events
+kubectl get all                              # sab ek saath
+kubectl get events --sort-by=.lastTimestamp  # haal ke cluster events
 
-# Deep inspect
-kubectl describe pod <pod-name>              # events + full config
+# Gehrai se dekho
+kubectl describe pod <pod-name>              # events + poora config
 kubectl describe ingress <ingress-name>      # routing rules + backend IPs
 kubectl describe service <service-name>      # selector + endpoints
 
 # Logs
 kubectl logs <pod-name>                      # app output
-kubectl logs <pod-name> -f                   # follow live
-kubectl logs <pod-name> --previous           # logs from crashed container
+kubectl logs <pod-name> -f                   # live follow
+kubectl logs <pod-name> --previous           # crash hue container ke logs
 kubectl logs <pod-name> -c <container>       # multi-container pod
-kubectl logs -l app=express --tail=50        # logs from all pods with a label
-kubectl logs deploy/express-deployment       # logs from a deployment's pod
+kubectl logs -l app=express --tail=50        # label wale saare pods ke logs
+kubectl logs deploy/express-deployment       # deployment ke pod ke logs
 
 # Network debug
-kubectl get endpoints <service-name>         # pod IPs in service pool
-kubectl exec -it <pod-name> -- sh            # shell inside pod
-# Inside pod: test another service
+kubectl get endpoints <service-name>         # service pool ke pod IPs
+kubectl exec -it <pod-name> -- sh            # pod ke andar shell
+# Pod ke andar: dusri service test
 wget -qO- http://some-service/api/data
 ```
 
-### Systematic troubleshooting flow
-
-```
-App not reachable?
-│
-├─ 1. kubectl get pods
-│     ├─ Pending            → describe pod (resources? PVC? image?)
-│     ├─ ImagePullBackOff   → image name/tag? built locally? pullPolicy?
-│     ├─ CrashLoopBackOff   → kubectl logs --previous (app error?)
-│     ├─ Running 0/1        → readiness probe failing → describe pod
-│     └─ Running 1/1 ✅     → go to step 2
-│
-├─ 2. kubectl get endpoints <service>
-│     ├─ <none>             → Service selector ≠ Pod labels
-│     └─ IPs listed ✅      → go to step 3
-│
-├─ 3. kubectl port-forward svc/<service> 8080:80 → curl localhost:8080
-│     ├─ fails              → targetPort wrong / app listening on wrong port or 127.0.0.1
-│     └─ works ✅           → Service is fine, problem is Ingress → step 4
-│
-└─ 4. kubectl describe ingress + ingress controller logs
-      ├─ 404                → host/path mismatch, wrong ingressClassName
-      ├─ 503                → backend service name/port wrong
-      └─ no ADDRESS         → controller not installed/running
-```
-
-### Quick label/port sanity checklist
+### Quick sanity checklist (label aur port)
 
 - Deployment `selector.matchLabels` == `template.metadata.labels`
 - Service `selector` == Pod labels
-- Service `targetPort` == container's listening port
-- Ingress backend `service.name` and `port.number` == Service name and `port`
-- Image exists locally: `docker images | grep express-k8s`
+- Service `targetPort` == container ka asli listening port
+- Ingress backend `service.name` aur `port.number` == Service ka naam aur `port`
+- Image local me hai: `docker images | grep express-k8s`
+
+### Yaad rakho
+- Order: pods → endpoints → port-forward → ingress.
+- `describe` ka **Events** section sabse zyada batata hai.
+- Crash ho to `logs --previous`.
 
 ---
 
-## 21. Autoscaling (HPA)
+## 20. Autoscaling (HPA)
 
-> **Key Concept** — The **HorizontalPodAutoscaler (HPA)** watches CPU usage across your pods and automatically scales the replica count up or down. When CPU exceeds your threshold it adds pods. When traffic drops it removes them. It requires **metrics-server** to read CPU data — on Docker Desktop this is *not* pre-installed and must be added manually.
+> **Ek line me:** **HPA** pods ki CPU usage dekhta rehta hai. Threshold cross ho to pods badhata hai, traffic kam ho to ghatata hai. Iske liye **metrics-server** chahiye, jo Docker Desktop me by default install **nahi** hota.
 
-### Step 0 — Install Metrics Server (required for HPA)
+### HPA kaise soch ta hai
 
-> ⚠️ **HPA will not work without metrics-server.** Running `kubectl top pods` will return *"Metrics API not available"* and HPA will show `<unknown>/50%` for CPU until metrics-server is installed and running.
+```
+Traffic badha → pod ki CPU 50% se upar
+    ↓
+HPA naya pod add karta hai (maxReplicas: 5 tak)
+    ↓
+Requests zyada pods me baat gayi
+    ↓
+Har pod ki CPU kam — load baant gaya
+    ↓
+Traffic ghata → CPU kam
+    ↓
+HPA extra pods hata deta hai (minReplicas: 1 tak)
+```
 
-**Option A: Official manifest with kubelet insecure TLS patch (recommended for Docker Desktop)**
+### Step 0 — Metrics Server install karo (zaroori)
+
+> ⚠️ **Metrics-server ke bina HPA kaam nahi karega.** `kubectl top pods` "Metrics API not available" dega aur HPA CPU ke jagah `<unknown>/50%` dikhayega.
+
+**Option A: Official manifest + kubelet insecure TLS patch (Docker Desktop ke liye recommended)**
 
 ```bash
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 
-# Docker Desktop uses a self-signed cert — patch metrics-server to skip TLS verify:
+# Docker Desktop self-signed cert use karta hai — TLS verify skip karne ka patch:
 kubectl patch deployment metrics-server -n kube-system \
   --type=json \
   -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
 
-# Wait for it to be ready (~30 seconds)
+# Ready hone ka wait (~30 seconds)
 kubectl rollout status deployment/metrics-server -n kube-system
 
-# Verify it works — you should see CPU and Memory columns
+# Verify — CPU aur Memory columns dikhne chahiye
 kubectl top nodes
 kubectl top pods
 ```
 
-**Option B: Helm install (if you have Helm)**
+**Option B: Helm se (agar Helm hai)**
 
 ```bash
 helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
@@ -2142,11 +2376,11 @@ helm upgrade --install metrics-server metrics-server/metrics-server \
   --set args={--kubelet-insecure-tls}
 ```
 
-> 💡 **Where does metrics-server run?** It runs as a pod in the `kube-system` namespace on the master/control-plane node. Verify with: `kubectl get pods -n kube-system | grep metrics`. You should see `metrics-server-xxxx   1/1   Running`.
+> 💡 Metrics-server `kube-system` namespace me master/control-plane node par pod ki tarah chalta hai. Check: `kubectl get pods -n kube-system | grep metrics` → `metrics-server-xxxx   1/1   Running`.
 
-> `--kubelet-insecure-tls` is for **local development only**. Never use it on a real cluster.
+> `--kubelet-insecure-tls` sirf **local development** ke liye hai. Asli cluster par kabhi nahi.
 
-### Create HPA via command
+### HPA banao (command se)
 
 ```bash
 kubectl autoscale deployment express-deployment \
@@ -2155,7 +2389,7 @@ kubectl autoscale deployment express-deployment \
   --cpu-percent=50
 ```
 
-### Or as a YAML file (recommended)
+### Ya YAML se (recommended)
 
 ```yaml
 apiVersion: autoscaling/v2
@@ -2166,7 +2400,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: express-deployment    # must match deployment name
+    name: express-deployment    # deployment ke naam se match
   minReplicas: 1
   maxReplicas: 5
   metrics:
@@ -2175,10 +2409,12 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 50   # scale when CPU > 50%
+          averageUtilization: 50   # CPU > 50% par scale
 ```
 
-### Add memory as a second metric (optional)
+> ⚠️ Deployment me **`resources.requests` set hona zaroori hai.** HPA utilization = *current CPU / requested CPU × 100* se nikalta hai. Requests ke bina baseline nahi, to HPA scale nahi karega.
+
+### Memory ko second metric banao (optional)
 
 ```yaml
 metrics:
@@ -2192,38 +2428,20 @@ metrics:
       target: { type: Utilization, averageUtilization: 70 }
 ```
 
-HPA computes desired replicas for each metric and uses the **highest**.
+HPA har metric ke liye desired replicas nikalta hai aur **sabse zyada** wala chunta hai.
 
-### The formula
+### Formula
 
 ```
 desiredReplicas = ceil( currentReplicas × currentUtilization / targetUtilization )
 
-Example: 2 pods at 100% CPU, target 50%
+Example: 2 pods, CPU 100%, target 50%
          → ceil(2 × 100 / 50) = 4 pods
 ```
 
-### HPA scaling flow
+### Scale-down jaan-boojhkar dheere hota hai
 
-```
-Traffic increases → CPU per pod goes above 50%
-    ↓
-HPA adds new pod (up to maxReplicas: 5)
-    ↓
-Requests spread across more pods
-    ↓
-CPU per pod drops — each pod handles less ✅
-    ↓
-Traffic drops → CPU goes low
-    ↓
-HPA removes extra pods (down to minReplicas: 1) ✅
-```
-
-> ⚠️ **resources.requests must be set** in your deployment for HPA to work. HPA calculates utilization as *current CPU / requested CPU × 100*. Without requests defined, HPA has no baseline to calculate from and will not scale.
-
-### Scale-down is deliberately slow
-
-By default HPA waits ~**5 minutes** of low usage before scaling down (stabilization window) to avoid flapping. You can tune it:
+By default HPA ~**5 minute** kam usage dekhne ke baad hi scale down karta hai (stabilization window), taaki baar-baar upar-neeche na ho. Tune karna ho:
 
 ```yaml
 spec:
@@ -2232,42 +2450,48 @@ spec:
       stabilizationWindowSeconds: 60
 ```
 
-### Generate load to test it
+### Load generate karke test karo
 
 ```bash
-# Terminal 1 — watch HPA
+# Terminal 1 — HPA watch
 kubectl get hpa -w
 
-# Terminal 2 — blast the service with requests from inside the cluster
+# Terminal 2 — cluster ke andar se service par requests ki bauchhar
 kubectl run load-gen --rm -it --image=busybox:1.36 -- \
   /bin/sh -c "while true; do wget -q -O- http://express-service/; done"
 
-# Terminal 3 — watch pods appear
+# Terminal 3 — pods aate hue dekho
 kubectl get pods -w
 ```
 
-Stop the load generator (`Ctrl+C`) and watch replicas shrink after the cooldown.
+Load generator band karo (`Ctrl+C`) aur cooldown ke baad replicas ghatte dekho.
 
 ```bash
-kubectl get hpa              # see current CPU%, desired vs actual replicas
-kubectl top pods             # real-time CPU and memory per pod
-kubectl describe hpa express-hpa   # events + why it scaled
+kubectl get hpa              # current CPU%, desired vs actual replicas
+kubectl top pods             # har pod ki live CPU aur memory
+kubectl describe hpa express-hpa   # events + kyun scale hua
 ```
 
-> If you use HPA, **remove `replicas:` from your Deployment YAML** (or accept that `kubectl apply` will reset the count each time).
+> HPA use kar rahe ho to Deployment YAML se **`replicas:` hata do** (warna har `kubectl apply` count reset kar dega).
+
+### Yaad rakho
+- HPA = metrics-server + `requests` + HPA YAML, teeno chahiye.
+- Scale up tez, scale down dheere.
 
 ---
 
-## 22. Other Workload Types
+# PART 9 — EXTRAS
 
-Deployments are for **stateless** apps. Kubernetes has other controllers for other jobs.
+## 21. Dusre Workload types
 
-| Kind | Use for | Key behavior |
+Deployment **stateless** apps ke liye hai. Baaki kaamon ke liye alag controllers hain.
+
+| Kind | Kis kaam ke liye | Khaas baat |
 |---|---|---|
-| **Deployment** | Stateless apps (APIs, frontends) | Interchangeable pods, rolling updates |
-| **StatefulSet** | Databases, Kafka, anything needing stable identity/storage | Pods named `db-0`, `db-1`…; each gets its own PVC; ordered start/stop |
-| **DaemonSet** | One pod **per node** (log collectors, monitoring agents) | Auto-adds a pod when a node joins |
-| **Job** | Run-to-completion task (migration, one-off script) | Retries until success, then stops |
+| **Deployment** | Stateless apps (API, frontend) | Interchangeable pods, rolling updates |
+| **StatefulSet** | Database, Kafka — jahan stable identity/storage chahiye | Pods ke naam `db-0`, `db-1`...; har ek ka apna PVC; ordered start/stop |
+| **DaemonSet** | Har **node par ek pod** (log collector, monitoring agent) | Naya node judte hi pod auto-add |
+| **Job** | Ek baar chalne wala kaam (migration, seed script) | Success tak retry, phir ruk jata hai |
 | **CronJob** | Scheduled Jobs | Cron syntax |
 
 ### Job
@@ -2278,10 +2502,10 @@ kind: Job
 metadata:
   name: db-seed
 spec:
-  backoffLimit: 3                  # retry up to 3 times
+  backoffLimit: 3                  # 3 baar tak retry
   template:
     spec:
-      restartPolicy: Never         # Jobs must use Never or OnFailure
+      restartPolicy: Never         # Job me Never ya OnFailure hi chalta hai
       containers:
         - name: seed
           image: express-k8s:latest
@@ -2299,7 +2523,7 @@ kind: CronJob
 metadata:
   name: nightly-cleanup
 spec:
-  schedule: "0 2 * * *"            # every day at 02:00
+  schedule: "0 2 * * *"            # roz raat 02:00 baje
   jobTemplate:
     spec:
       template:
@@ -2323,10 +2547,10 @@ Cron format:  ┌ minute (0-59)
 ```bash
 kubectl get jobs
 kubectl get cronjobs
-kubectl create job manual-run --from=cronjob/nightly-cleanup   # trigger a CronJob right now
+kubectl create job manual-run --from=cronjob/nightly-cleanup   # CronJob abhi trigger karo
 ```
 
-### StatefulSet (short example)
+### StatefulSet (chhota example)
 
 ```yaml
 apiVersion: apps/v1
@@ -2334,7 +2558,7 @@ kind: StatefulSet
 metadata:
   name: mongo
 spec:
-  serviceName: mongo-headless      # needs a headless Service (clusterIP: None)
+  serviceName: mongo-headless      # headless Service chahiye (clusterIP: None)
   replicas: 1
   selector:
     matchLabels:
@@ -2350,7 +2574,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data/db
-  volumeClaimTemplates:            # each replica gets its OWN PVC automatically
+  volumeClaimTemplates:            # har replica ko apna PVC automatically
     - metadata:
         name: data
       spec:
@@ -2362,29 +2586,27 @@ spec:
 
 ---
 
-## 23. Helm & Kustomize
+## 22. Helm aur Kustomize
 
-### Why they exist
-
-Copy-pasting YAML for dev/staging/prod gets messy. Two common solutions:
+> **Ek line me:** Dev/staging/prod ke liye YAML copy-paste karna jaldi hi gandagi ban jata hai. Helm aur Kustomize isi ko sambhalte hain.
 
 | Tool | Idea |
 |---|---|
-| **Helm** | Package manager. YAML **templates** + a `values.yaml`. Install ready-made charts (nginx-ingress, mongodb, redis, prometheus…). |
-| **Kustomize** | Built into kubectl. Keep a **base** YAML and apply small **overlays** (patches) per environment. No templating. |
+| **Helm** | Package manager. YAML **templates** + `values.yaml`. Ready-made charts (nginx-ingress, mongodb, redis, prometheus...) install kar sakte ho. |
+| **Kustomize** | kubectl me built-in. Ek **base** YAML rakho aur har environment ke liye chhote **overlays** (patches) lagao. Templating nahi. |
 
 ### Helm basics
 
 ```bash
-# Install Helm (Mac)
+# Helm install (Mac)
 brew install helm
 
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
 helm search repo redis
 
-helm install my-redis bitnami/redis                      # install a chart
-helm install my-redis bitnami/redis -f my-values.yaml    # with custom values
+helm install my-redis bitnami/redis                      # chart install
+helm install my-redis bitnami/redis -f my-values.yaml    # custom values ke saath
 helm install my-redis bitnami/redis --set auth.enabled=false
 
 helm list                                                # installed releases
@@ -2393,7 +2615,7 @@ helm rollback my-redis 1
 helm uninstall my-redis
 ```
 
-Install nginx ingress via Helm instead of raw manifest:
+nginx ingress Helm se install karna (raw manifest ki jagah):
 
 ```bash
 helm upgrade --install ingress-nginx ingress-nginx \
@@ -2436,26 +2658,26 @@ images:
 ```
 
 ```bash
-kubectl kustomize k8s/overlays/prod      # preview final YAML
-kubectl apply -k k8s/overlays/prod       # apply it
+kubectl kustomize k8s/overlays/prod      # final YAML ka preview
+kubectl apply -k k8s/overlays/prod       # apply
 ```
 
 ---
 
-## 24. Handy Tools
+## 23. Useful Tools
 
-| Tool | What it does |
+| Tool | Kya karta hai |
 |---|---|
-| **Docker Desktop Kubernetes dashboard / Containers view** | Quick look at what's running |
-| **k9s** | Terminal UI for the cluster — browse pods, logs, shells with keyboard shortcuts. `brew install k9s` |
-| **Lens / OpenLens** | Desktop GUI for clusters |
-| **kubectx / kubens** | Switch context / namespace fast: `kubectx docker-desktop`, `kubens dev` |
-| **stern** | Tail logs from many pods at once: `stern express` |
-| **kubectl neat** | Strip noisy fields from `-o yaml` output |
-| **Kubernetes Dashboard** | Official web UI (extra install) |
+| **Docker Desktop Containers view** | Kya chal raha hai ek nazar me |
+| **k9s** | Terminal UI — keyboard se pods, logs, shell. `brew install k9s` |
+| **Lens / OpenLens** | Cluster ke liye desktop GUI |
+| **kubectx / kubens** | Context / namespace jaldi badlo: `kubectx docker-desktop`, `kubens dev` |
+| **stern** | Kai pods ke logs ek saath tail: `stern express` |
+| **kubectl neat** | `-o yaml` output se faltu fields hatata hai |
+| **Kubernetes Dashboard** | Official web UI (alag install) |
 | **VS Code Kubernetes extension** | YAML validation, cluster explorer |
-| **kubeconform / kubeval** | Validate YAML in CI before applying |
-| **Skaffold / Tilt** | Auto rebuild + redeploy on code change (inner-loop dev) |
+| **kubeconform / kubeval** | CI me apply se pehle YAML validate |
+| **Skaffold / Tilt** | Code change par auto rebuild + redeploy (inner-loop dev) |
 
 ### kubectl autocomplete
 
@@ -2471,102 +2693,102 @@ echo 'source <(kubectl completion bash)' >> ~/.bashrc
 
 ---
 
-## 25. Cleanup & Reset
+## 24. Cleanup aur Reset
 
 ```bash
-# Delete resources you created from YAML
+# YAML se banaye resources delete
 kubectl delete -f k8s/
 
-# Delete by type/name
+# Type/naam se delete
 kubectl delete deployment express-deployment
 kubectl delete svc express-service
 kubectl delete hpa express-hpa
 
-# Delete everything in the current namespace (careful!)
+# Current namespace ka sab kuch delete (savdhan!)
 kubectl delete all --all
 
-# Delete a whole namespace and everything in it
+# Poora namespace aur uska sab kuch
 kubectl delete namespace dev
 
-# Remove the ingress controller
+# Ingress controller hatao
 kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
 
-# Clean unused Docker images/containers to free disk
+# Disk bachane ke liye unused Docker images/containers saaf
 docker system prune -a
 ```
 
-> `kubectl delete all --all` does **not** remove ConfigMaps, Secrets, PVCs or Ingress — delete them separately.
+> `kubectl delete all --all` ConfigMaps, Secrets, PVCs ya Ingress ko **delete nahi karta** — unhe alag se delete karo.
 
-### Full reset of the local cluster
+### Local cluster ka full reset
 
-Docker Desktop → Settings → Kubernetes → **Reset Kubernetes Cluster**. This wipes every resource and gives you a fresh single-node cluster (you'll need to reinstall ingress-nginx and metrics-server).
+Docker Desktop → Settings → Kubernetes → **Reset Kubernetes Cluster**. Har resource saaf hokar fresh single-node cluster milta hai (ingress-nginx aur metrics-server dobara install karne padenge).
 
-### Pause Kubernetes to save RAM
+### RAM bachane ke liye Kubernetes pause
 
-Docker Desktop → Settings → Kubernetes → uncheck **Enable Kubernetes** → Apply. Re-enable later (your YAML files are safe, but cluster state is lost).
+Docker Desktop → Settings → Kubernetes → **Enable Kubernetes** untick → Apply. Baad me dobara enable karo (YAML files safe, par cluster state chali jati hai).
 
 ---
 
-## 26. From Local to EKS
+## 25. Local se EKS tak
 
-What changes when you move the same YAML from Docker Desktop to AWS EKS:
+Wahi YAML Docker Desktop se AWS EKS par le jao to kya badalta hai:
 
 | Topic | Local (Docker Desktop) | EKS (AWS) |
 |---|---|---|
-| **Images** | Local Docker store, `imagePullPolicy: IfNotPresent` | Push to **ECR**, use full image URL, `imagePullPolicy: Always` |
-| **Image name** | `express-k8s:latest` | `<account>.dkr.ecr.<region>.amazonaws.com/express-k8s:v1` |
+| **Images** | Local Docker store, `imagePullPolicy: IfNotPresent` | **ECR** me push, poora image URL, `imagePullPolicy: Always` |
+| **Image naam** | `express-k8s:latest` | `<account>.dkr.ecr.<region>.amazonaws.com/express-k8s:v1` |
 | **Nodes** | 1 node | Multiple nodes (managed node group / Fargate) |
-| **Ingress controller** | nginx, LoadBalancer = `localhost` | nginx or **AWS Load Balancer Controller (ALB)**; real public DNS |
-| **Service type LoadBalancer** | Maps to localhost | Creates a real AWS ELB (costs money) |
-| **Storage** | hostpath StorageClass | EBS (`gp3`) for RWO, EFS for RWX |
+| **Ingress controller** | nginx, LoadBalancer = `localhost` | nginx ya **AWS Load Balancer Controller (ALB)**; asli public DNS |
+| **Service type LoadBalancer** | localhost se map | Asli AWS ELB banta hai (paise lagte hain) |
+| **Storage** | hostpath StorageClass | RWO ke liye EBS (`gp3`), RWX ke liye EFS |
 | **Secrets** | Plain k8s Secrets | AWS Secrets Manager + External Secrets / CSI driver |
 | **Domain / TLS** | `/etc/hosts`, self-signed | Route 53 + ACM / cert-manager |
-| **Metrics-server** | Install manually with `--kubelet-insecure-tls` | Install normally (no insecure flag) |
-| **Context** | `docker-desktop` | Added by `aws eks update-kubeconfig` / eksctl |
+| **Metrics-server** | Manually, `--kubelet-insecure-tls` ke saath | Normal install (insecure flag nahi) |
+| **Context** | `docker-desktop` | `aws eks update-kubeconfig` / eksctl se add hota hai |
 
 ```bash
-# Switching contexts
+# Context switch
 kubectl config get-contexts
 kubectl config use-context docker-desktop
 kubectl config use-context <eks-context-name>
 ```
 
-> Always run `kubectl config current-context` before `apply`/`delete`.
+> `apply` / `delete` se pehle hamesha `kubectl config current-context`.
 
 ---
 
-## 27. Best Practices Checklist
+## 26. Best Practices Checklist
 
-**Images & containers**
-- [ ] Use specific image tags (`v1.2.3`), not just `:latest`
-- [ ] Small base images (`node:20-alpine`), `.dockerignore` in place
-- [ ] App listens on `0.0.0.0` and handles `SIGTERM` gracefully
-- [ ] Run as non-root user where possible
+**Images aur containers**
+- [ ] Specific image tags (`v1.2.3`), sirf `:latest` nahi
+- [ ] Chhote base images (`node:20-alpine`), `.dockerignore` maujood
+- [ ] App `0.0.0.0` par sunti hai aur `SIGTERM` gracefully handle karti hai
+- [ ] Jahan ho sake non-root user
 
 **Deployments**
-- [ ] `resources.requests` **and** `limits` set on every container
-- [ ] `readinessProbe` (and a simple `livenessProbe`) configured
-- [ ] `replicas >= 2` for anything that needs availability
+- [ ] Har container par `resources.requests` **aur** `limits`
+- [ ] `readinessProbe` (aur simple `livenessProbe`) set
+- [ ] Availability chahiye to `replicas >= 2`
 - [ ] Labels consistent: `selector` == `template.labels` == Service `selector`
-- [ ] Rolling update tuned (`maxUnavailable: 0` for zero downtime)
+- [ ] Rolling update tune (zero downtime ke liye `maxUnavailable: 0`)
 
-**Config & secrets**
-- [ ] Non-secret config in **ConfigMap**, sensitive in **Secret**
-- [ ] Secret YAML files in `.gitignore`
-- [ ] Never hardcode connection strings/passwords in the image or YAML in git
-- [ ] Restart pods after changing env-based ConfigMap/Secret
+**Config aur secrets**
+- [ ] Non-secret config **ConfigMap** me, sensitive **Secret** me
+- [ ] Secret YAML `.gitignore` me
+- [ ] Connection strings/passwords image ya git wali YAML me hardcode nahi
+- [ ] Env-based ConfigMap/Secret badalne ke baad pods restart
 
 **Networking**
-- [ ] Services talk via **service names**, never `localhost`
-- [ ] One Ingress as the single external entry point
-- [ ] `ingressClassName` set explicitly
+- [ ] Services **service names** se baat karein, kabhi `localhost` nahi
+- [ ] Bahar ke liye ek Ingress, single entry point
+- [ ] `ingressClassName` explicitly set
 
 **Operations**
-- [ ] Check `kubectl config current-context` before destructive commands
-- [ ] Use namespaces to separate environments / projects
-- [ ] YAML files live in git (one file per resource, grouped in `k8s/`)
-- [ ] `kubectl apply -f` (declarative) over ad-hoc `kubectl edit`
-- [ ] Debug in order: pods → endpoints → port-forward → ingress
+- [ ] Destructive commands se pehle `kubectl config current-context`
+- [ ] Environments / projects ke liye namespaces
+- [ ] YAML git me (ek resource ek file, `k8s/` folder me)
+- [ ] `kubectl apply -f` (declarative), ad-hoc `kubectl edit` nahi
+- [ ] Debug order: pods → endpoints → port-forward → ingress
 
 ---
 
@@ -2610,4 +2832,4 @@ kubectl delete -f k8s/
 
 ---
 
-*Sheryians Coding School · Kubernetes Local Setup Notes · Docker Desktop · MERN Stack · nginx Ingress*
+*  Kubernetes Local Setup Notes · Docker Desktop · MERN Stack · nginx Ingress*
