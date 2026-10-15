@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sandbox Orchestration — Setup Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,wght@0,300;0,600;0,700;0,900;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:       #0E0F14;
+  --paper:     #F5F2EB;
+  --paper2:    #EDE9DF;
+  --paper3:    #E4DFD3;
+  --rule:      #D4CEBC;
+  --muted:     #6B6455;
+  --accent:    #C84B1F;
+  --accent2:   #1A6B4A;
+  --accent3:   #1B4587;
+  --gold:      #B8860B;
+  --code-bg:   #1A1C24;
+  --code-text: #E2DCCC;
+  --flag-c:    #5BA4CF;
+  --val-c:     #F4A261;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14.5px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.layout { display: flex; min-height: 100vh; }
+
+/* ─── Sidebar ─────────────────────────────────────── */
+nav {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--ink);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 32px 0 40px;
+}
+
+.nav-brand { padding: 0 24px 28px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 24px; }
+.nav-brand .logo {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+}
+.nav-brand .logo span { color: var(--accent); }
+.nav-brand .sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.06em;
+}
+
+.nav-group-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 16px 24px 8px;
+}
+
+nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 24px;
+  text-decoration: none;
+  color: rgba(255,255,255,0.5);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+nav a:hover { color: white; background: rgba(255,255,255,0.04); }
+nav a.active { color: white; border-left-color: var(--accent); background: rgba(200,75,31,0.08); }
+nav a:hover .nav-num, nav a.active .nav-num { background: var(--accent); color: white; }
+
+.nav-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  transition: all 0.15s ease;
+}
+
+/* ─── Main ────────────────────────────────────────── */
+main {
+  flex: 1;
+  max-width: calc(99% - 256px);
+  padding: 56px 56px 80px;
+}
+
+/* ─── Hero ────────────────────────────────────────── */
+.hero { margin-bottom: 64px; padding-bottom: 40px; border-bottom: 1px solid var(--rule); }
+.hero-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 16px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+.hero h1 em { font-style: italic; color: var(--accent); font-weight: 900; }
+.hero-desc {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 560px;
+  line-height: 1.65;
+  margin-bottom: 24px;
+}
+.hero-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.hero-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* ─── Section ─────────────────────────────────────── */
+.section {
+  margin-bottom: 72px;
+  animation: fadeUp 0.4s ease both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+.section-num-big {
+  font-family: 'Fraunces', serif;
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--rule);
+  user-select: none;
+  line-height: 1;
+}
+.section-title-block { flex: 1; }
+.section-title {
+  font-family: 'Fraunces', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.section-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 28px 0 12px;
+}
+h4 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 20px 0 10px;
+}
+p { color: #2A2720; margin-bottom: 12px; }
+strong { font-weight: 500; color: var(--ink); }
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--paper3);
+  border: 1px solid var(--rule);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+ul, ol { margin: 0 0 12px 22px; }
+li { color: #2A2720; margin-bottom: 6px; }
+
+/* ─── Components ──────────────────────────────────── */
+.concept {
+  background: var(--paper2);
+  border-left: 3px solid var(--accent3);
+  border-radius: 0 8px 8px 0;
+  padding: 16px 20px;
+  margin: 16px 0;
+}
+.concept-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--accent3);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+.concept p { font-size: 14px; line-height: 1.65; color: var(--ink); margin: 0; }
+
+.note {
+  background: #FEF9EC;
+  border: 1px solid #EDD97A;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.note .note-icon { font-size: 16px; flex-shrink: 0; }
+.note p { color: #5C4A00; font-size: 13px; margin: 0; line-height: 1.6; }
+.note strong { color: #3D3000; }
+
+.warn {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.warn .note-icon { font-size: 16px; flex-shrink: 0; }
+.warn p { color: #7F1D1D; font-size: 13px; margin: 0; line-height: 1.6; }
+.warn strong { color: #5C0F0F; }
+
+.step-label {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin: 16px 0 8px;
+}
+.step-label.green { background: var(--accent2); }
+.step-label.blue { background: var(--accent3); }
+.step-label.gold { background: var(--gold); }
+
+/* ─── Code block ──────────────────────────────────── */
+.code-wrap {
+  background: var(--code-bg);
+  border-radius: 8px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.code-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.copy-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.15s ease;
+}
+.copy-btn:hover { color: white; border-color: rgba(255,255,255,0.4); }
+pre {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  color: var(--code-text);
+  padding: 16px;
+  overflow-x: auto;
+  line-height: 1.6;
+  white-space: pre;
+}
+.c-cmd { color: #87CEEB; font-weight: 600; }
+.c-flag { color: var(--flag-c); }
+.c-val { color: var(--val-c); }
+.c-str { color: #98C379; }
+.c-comment { color: rgba(255,255,255,0.28); font-style: italic; }
+.c-key { color: #C678DD; }
+.c-pipe { color: #E5C07B; }
+
+/* ─── Tables ──────────────────────────────────────── */
+.flag-table, .compare {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.flag-table th {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--paper3);
+  text-align: left;
+  padding: 10px 14px;
+  font-weight: 500;
+}
+.flag-table td { padding: 10px 14px; border-top: 1px solid var(--rule); vertical-align: top; }
+.flag-table tbody tr:hover { background: var(--paper2); }
+.f-name { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: var(--flag-c); }
+.f-val { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--val-c); }
+.f-desc { font-size: 13px; color: var(--ink); }
+.f-why { font-size: 12px; color: var(--muted); }
+
+.compare th {
+  background: var(--ink);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 14px;
+  text-align: left;
+}
+.compare th:first-child { border-top-left-radius: 6px; }
+.compare th:last-child { border-top-right-radius: 6px; }
+.compare td { padding: 12px 14px; border-top: 1px solid var(--rule); font-size: 13px; }
+.compare .row-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.compare .local-val { color: var(--muted); }
+.compare .eks-val { color: var(--accent2); font-weight: 500; }
+
+/* ─── Flow diagram ────────────────────────────────── */
+.flow { margin: 16px 0; }
+.flow-step { display: flex; gap: 16px; min-height: 56px; }
+.flow-line { display: flex; flex-direction: column; align-items: center; padding-top: 6px; }
+.flow-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+.flow-connector { width: 2px; flex: 1; background: var(--rule); margin-top: 4px; }
+.flow-content { padding-bottom: 16px; flex: 1; }
+.flow-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.flow-detail { font-size: 12.5px; color: var(--muted); }
+
+/* ─── Scale diagram ───────────────────────────────── */
+.scale-diagram {
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 20px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  line-height: 2;
+  color: var(--muted);
+  margin: 16px 0;
+}
+.scale-diagram .hi { color: var(--ink); font-weight: bold; }
+.scale-diagram .green { color: var(--accent2); }
+.scale-diagram .red { color: var(--accent); }
+
+/* ─── Divider ─────────────────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 40px 0;
+}
+
+/* ─── Footer ──────────────────────────────────────── */
+footer {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 2px solid var(--rule);
+  padding-top: 24px;
+  margin-top: 60px;
+}
+
+/* ─── Mobile ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  nav { display: none; }
+  main { padding: 32px 24px 60px; max-width: 100%; }
+  .hero h1 { font-size: 32px; }
+  footer { flex-direction: column; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<nav>
+  <div class="nav-brand">
+    <div class="logo">Sandbox<span>.</span>Orchestration</div>
+    <div class="sub">Setup &amp; Onboarding</div>
+  </div>
+
+  <div class="nav-group-label">Getting Started</div>
+  <a href="#overview"><span class="nav-num">1</span>Overview</a>
+  <a href="#architecture"><span class="nav-num">2</span>Architecture</a>
+  <a href="#structure"><span class="nav-num">3</span>Folder structure</a>
+
+  <div class="nav-group-label">Prerequisites</div>
+  <a href="#tools"><span class="nav-num">4</span>Required tools</a>
+  <a href="#dns"><span class="nav-num">5</span>Local DNS setup</a>
+  <a href="#ingress"><span class="nav-num">6</span>Nginx ingress</a>
+
+  <div class="nav-group-label">Cloud Setup</div>
+  <a href="#s3"><span class="nav-num">7</span>S3 bucket</a>
+  <a href="#iam"><span class="nav-num">8</span>IAM credentials</a>
+  <a href="#secret"><span class="nav-num">9</span>Kubernetes secret</a>
+
+  <div class="nav-group-label">Build &amp; Deploy</div>
+  <a href="#images"><span class="nav-num">10</span>Build images</a>
+  <a href="#deploy"><span class="nav-num">11</span>Deploy to cluster</a>
+  <a href="#frontend"><span class="nav-num">12</span>Run frontend</a>
+
+  <div class="nav-group-label">Reference</div>
+  <a href="#testing"><span class="nav-num">13</span>Testing</a>
+  <a href="#troubleshoot"><span class="nav-num">14</span>Troubleshooting</a>
+</nav>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <div class="hero-eyebrow">Engineering · Onboarding</div>
+  <h1>Sandbox <em>orchestration</em><br>setup guide</h1>
+  <p class="hero-desc">
+    A Kubernetes-based system that spins up isolated React/Vite sandboxes per user, each with its own terminal, live preview, and S3-backed persistence. This guide takes you from a fresh checkout to a working local cluster.
+  </p>
+  <div class="hero-tags">
+    <span class="hero-tag">Kubernetes</span>
+    <span class="hero-tag">Docker Desktop</span>
+    <span class="hero-tag">Node.js 20+</span>
+    <span class="hero-tag">AWS S3</span>
+    <span class="hero-tag">Skaffold</span>
+  </div>
+</section>
+
+<!-- ─── 01 OVERVIEW ─── -->
+<section class="section" id="overview">
+  <div class="section-header">
+    <div class="section-num-big">01</div>
+    <div class="section-title-block">
+      <div class="section-title">What this project does</div>
+      <div class="section-subtitle">A high-level mental model before you touch any code</div>
+    </div>
+  </div>
+
+  <p>
+    The orchestrator is an Express API that, on demand, creates a Kubernetes pod containing a user's Vite project, a terminal agent, and a sync sidecar. Each sandbox is reachable at its own subdomain. Files persist in S3, so a sandbox can be torn down and recreated with the same state.
+  </p>
+
+  <div class="concept">
+    <div class="concept-label">Key Concept</div>
+    <p><strong>One pod per sandbox.</strong> Each pod runs three containers sharing a single <code>emptyDir</code> volume mounted at <code>/workspace</code>: the Vite preview, the comm-agent (terminal over socket.io), and the sync-sidecar (watches files and pushes changes to S3).</p>
+  </div>
+
+  <h3>Per-sandbox URLs</h3>
+  <p>When you start a sandbox you get back two URLs:</p>
+
+  <table class="flag-table">
+    <thead><tr><th>URL</th><th>Routes to</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="f-name">{id}.preview.localhost</span></td>
+        <td><span class="f-val">port 5173</span></td>
+        <td class="f-desc">Vite dev server output — the live React app the user is editing.</td>
+      </tr>
+      <tr>
+        <td><span class="f-name">{id}.agent.localhost</span></td>
+        <td><span class="f-val">port 3000</span></td>
+        <td class="f-desc">Comm-agent socket.io — terminal input/output streamed via xterm.js on the frontend.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 02 ARCHITECTURE ─── -->
+<section class="section" id="architecture">
+  <div class="section-header">
+    <div class="section-num-big">02</div>
+    <div class="section-title-block">
+      <div class="section-title">Architecture</div>
+      <div class="section-subtitle">How the pieces fit together at runtime</div>
+    </div>
+  </div>
+
+  <h3>Request flow — starting a new sandbox</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">User clicks "start sandbox" on the frontend</div>
+        <div class="flow-detail">POST /api/sandbox/start (proxied to the orchestrator)</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Orchestrator generates a UUIDv7 sandbox ID</div>
+        <div class="flow-detail">Used as the pod name suffix and S3 prefix</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Pod created with init container + 3 main containers</div>
+        <div class="flow-detail">Init: sync-init seeds /workspace from S3 or template, runs npm install, exits</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">Service + Ingress created</div>
+        <div class="flow-detail">ClusterIP service exposes ports 3000 + 5173, Ingress routes subdomains</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-line"><div class="flow-dot" style="background:var(--accent2)"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">URLs returned to client</div>
+        <div class="flow-detail">Frontend opens the preview iframe and connects xterm to the agent over WebSocket</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Container responsibilities</h3>
+  <table class="flag-table">
+    <thead><tr><th>Container</th><th>Image</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="f-name">sync-init</span></td>
+        <td><span class="f-val">sandbox-sync</span></td>
+        <td class="f-desc">Init container. Downloads files from S3 if the sandbox exists, otherwise copies the bundled template and pushes it to S3. Then runs <code>npm install</code> in <code>/workspace</code>. Exits when done.</td>
+      </tr>
+      <tr>
+        <td><span class="f-name">sandbox-container</span></td>
+        <td><span class="f-val">template</span></td>
+        <td class="f-desc">Vite dev server bound to 0.0.0.0:5173. Uses <code>npx vite</code> so it picks up node_modules from the shared volume.</td>
+      </tr>
+      <tr>
+        <td><span class="f-name">sandbox-agent</span></td>
+        <td><span class="f-val">sandbox-agent</span></td>
+        <td class="f-desc">Express + socket.io + node-pty. Spawns an interactive shell in <code>/workspace</code> and pipes I/O over WebSocket. <strong>No AWS credentials.</strong></td>
+      </tr>
+      <tr>
+        <td><span class="f-name">sync-sidecar</span></td>
+        <td><span class="f-val">sandbox-sync</span></td>
+        <td class="f-desc">Runs <code>watch.js</code>. Chokidar watches <code>/workspace</code> and pushes any add/change/delete to S3 instantly. <strong>This is the only container with AWS credentials.</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="concept">
+    <div class="concept-label">Why the split</div>
+    <p>The user has terminal access to <strong>sandbox-agent</strong>. If AWS credentials lived there, anyone could run <code>env</code> and steal them. Putting the credentials in a separate sidecar that the user can never exec into keeps the blast radius zero.</p>
+  </div>
+</section>
+
+<!-- ─── 03 STRUCTURE ─── -->
+<section class="section" id="structure">
+  <div class="section-header">
+    <div class="section-num-big">03</div>
+    <div class="section-title-block">
+      <div class="section-title">Folder structure</div>
+      <div class="section-subtitle">What's where and why</div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Repository layout</span></div>
+<pre>orchestration/
+├── frontend/                    <span class="c-comment"># React + Vite UI (lives outside the cluster)</span>
+│   ├── src/
+│   │   ├── app/App.jsx
+│   │   ├── components/TerminalComponent.jsx
+│   │   └── main.jsx
+│   ├── vite.config.js           <span class="c-comment"># Proxies /api → orchestrator</span>
+│   └── dockerfile
+│
+├── sandbox/                     <span class="c-comment"># The orchestrator (Express API)</span>
+│   ├── src/
+│   │   ├── kubernetes/
+│   │   │   ├── config.js        <span class="c-comment"># k8s client setup</span>
+│   │   │   ├── pod.js           <span class="c-comment"># createPod()</span>
+│   │   │   └── service.js       <span class="c-comment"># createService(), createSandboxIngress()</span>
+│   │   ├── routes/sandbox.routes.js
+│   │   ├── utils/constant.js
+│   │   └── app.js
+│   ├── server.js
+│   └── dockerfile
+│
+├── sandbox-agents/
+│   ├── comm-agent/              <span class="c-comment"># Terminal agent (no AWS creds)</span>
+│   │   ├── server.js
+│   │   └── dockerfile
+│   └── sync-agent/              <span class="c-comment"># S3 sync sidecar (has AWS creds)</span>
+│       ├── seed.js              <span class="c-comment"># Init: seed /workspace + npm install</span>
+│       ├── watch.js             <span class="c-comment"># Sidecar: chokidar → S3</span>
+│       └── dockerfile
+│
+├── template/                    <span class="c-comment"># Default Vite project copied into new sandboxes</span>
+│   ├── src/
+│   ├── package.json
+│   └── vite.config.js
+│
+├── k8s/                         <span class="c-comment"># Static manifests (orchestrator + ingress + RBAC)</span>
+│   ├── sandbox-deployment.yml
+│   ├── sandbox-service.yml
+│   ├── ingress.yml
+│   └── rbac.yaml
+│
+└── skaffold.yml                 <span class="c-comment"># Builds all images + deploys</span></pre>
+  </div>
+</section>
+
+<!-- ─── 04 TOOLS ─── -->
+<section class="section" id="tools">
+  <div class="section-header">
+    <div class="section-num-big">04</div>
+    <div class="section-title-block">
+      <div class="section-title">Required tools</div>
+      <div class="section-subtitle">Install these before doing anything else</div>
+    </div>
+  </div>
+
+  <table class="flag-table">
+    <thead><tr><th>Tool</th><th>Version</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><span class="f-name">Docker Desktop</span></td><td><span class="f-val">latest</span></td><td class="f-desc">Provides the local Kubernetes cluster. Enable Kubernetes in Docker Desktop settings.</td></tr>
+      <tr><td><span class="f-name">kubectl</span></td><td><span class="f-val">≥ 1.28</span></td><td class="f-desc">Bundled with Docker Desktop, but a standalone install is fine.</td></tr>
+      <tr><td><span class="f-name">skaffold</span></td><td><span class="f-val">≥ v2.0</span></td><td class="f-desc">Builds all images and applies manifests in one step.</td></tr>
+      <tr><td><span class="f-name">Node.js</span></td><td><span class="f-val">≥ 20</span></td><td class="f-desc">For running the frontend. Containers ship their own runtime.</td></tr>
+      <tr><td><span class="f-name">dnsmasq</span></td><td><span class="f-val">latest</span></td><td class="f-desc">Wildcard DNS for <code>*.localhost</code>. macOS install via Homebrew shown below.</td></tr>
+      <tr><td><span class="f-name">aws-cli</span></td><td><span class="f-val">v2</span></td><td class="f-desc">Optional but useful for inspecting the S3 bucket directly.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Enable Kubernetes in Docker Desktop</h3>
+  <p>Open Docker Desktop → Settings → Kubernetes → check <strong>Enable Kubernetes</strong> → Apply &amp; Restart. Verify with:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">kubectl</span> config current-context
+<span class="c-comment"># Should print: docker-desktop</span>
+
+<span class="c-cmd">kubectl</span> get nodes
+<span class="c-comment"># Should show one node in Ready state</span></pre>
+  </div>
+</section>
+
+<!-- ─── 05 DNS ─── -->
+<section class="section" id="dns">
+  <div class="section-header">
+    <div class="section-num-big">05</div>
+    <div class="section-title-block">
+      <div class="section-title">Local DNS — wildcard resolver</div>
+      <div class="section-subtitle">So <code>*.preview.localhost</code> and <code>*.agent.localhost</code> resolve to your cluster</div>
+    </div>
+  </div>
+
+  <p>
+    Each sandbox lives at a unique subdomain like <code>019e0d18-bdbd.preview.localhost</code>. Without a wildcard resolver you'd have to add every sandbox ID to <code>/etc/hosts</code> manually — not workable. dnsmasq handles all <code>*.localhost</code> hosts in one rule.
+  </p>
+
+  <div class="step-label">Step 1 — Install dnsmasq (macOS)</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">brew</span> install dnsmasq</pre>
+  </div>
+
+  <div class="step-label">Step 2 — Add the wildcard rule</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">echo</span> <span class="c-str">"address=/.localhost/127.0.0.1"</span> <span class="c-pipe">&gt;&gt;</span> $(<span class="c-cmd">brew</span> --prefix)/etc/dnsmasq.conf
+
+<span class="c-cmd">sudo</span> brew services start dnsmasq</pre>
+  </div>
+
+  <div class="step-label">Step 3 — Tell macOS to use dnsmasq for .localhost</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">sudo</span> mkdir -p /etc/resolver
+<span class="c-cmd">echo</span> <span class="c-str">"nameserver 127.0.0.1"</span> <span class="c-pipe">|</span> <span class="c-cmd">sudo</span> tee /etc/resolver/localhost</pre>
+  </div>
+
+  <div class="step-label green">Step 4 — Verify</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">dig</span> +short anything.preview.localhost @127.0.0.1
+<span class="c-comment"># Expected output: 127.0.0.1</span>
+
+<span class="c-cmd">ping</span> -c1 random-id.agent.localhost
+<span class="c-comment"># Should reply from 127.0.0.1</span></pre>
+  </div>
+
+  <div class="note">
+    <div class="note-icon">💡</div>
+    <p>On Linux, install <code>dnsmasq</code> via your package manager and add the same <code>address=/.localhost/127.0.0.1</code> line to <code>/etc/dnsmasq.conf</code>. Restart NetworkManager or your DNS service afterward.</p>
+  </div>
+</section>
+
+<!-- ─── 06 INGRESS ─── -->
+<section class="section" id="ingress">
+  <div class="section-header">
+    <div class="section-num-big">06</div>
+    <div class="section-title-block">
+      <div class="section-title">Install Nginx Ingress Controller</div>
+      <div class="section-subtitle">Required for subdomain routing — Docker Desktop doesn't include one</div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">kubectl</span> apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
+
+<span class="c-cmd">kubectl</span> wait --namespace ingress-nginx <span class="c-pipe">\</span>
+  --for=condition=ready pod <span class="c-pipe">\</span>
+  --selector=app.kubernetes.io/component=controller <span class="c-pipe">\</span>
+  --timeout=120s</pre>
+  </div>
+
+  <div class="step-label green">Verify it's bound to localhost</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">kubectl</span> get svc -n ingress-nginx
+<span class="c-comment"># Look for ingress-nginx-controller — EXTERNAL-IP should be "localhost"</span>
+<span class="c-comment"># PORT(S) should include 80:xxxxx/TCP</span></pre>
+  </div>
+
+  <div class="warn">
+    <div class="note-icon">⚠️</div>
+    <p>If <code>EXTERNAL-IP</code> stays as <code>&lt;pending&gt;</code>, your Docker Desktop Kubernetes isn't routing LoadBalancer services to localhost. Restart Docker Desktop and try again. <strong>Without this, you'll get <code>ECONNREFUSED 127.0.0.1:80</code></strong> when hitting any sandbox URL.</p>
+  </div>
+</section>
+
+<!-- ─── 07 S3 ─── -->
+<section class="section" id="s3">
+  <div class="section-header">
+    <div class="section-num-big">07</div>
+    <div class="section-title-block">
+      <div class="section-title">Create the S3 bucket</div>
+      <div class="section-subtitle">Stores user files across sandbox restarts</div>
+    </div>
+  </div>
+
+  <div class="step-label">Step 1 — Create the bucket</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">aws</span> s3api create-bucket <span class="c-pipe">\</span>
+  <span class="c-flag">--bucket</span> <span class="c-val">your-sandbox-bucket-name</span> <span class="c-pipe">\</span>
+  <span class="c-flag">--region</span> <span class="c-val">ap-southeast-1</span> <span class="c-pipe">\</span>
+  <span class="c-flag">--create-bucket-configuration</span> <span class="c-val">LocationConstraint=ap-southeast-1</span></pre>
+  </div>
+
+  <div class="note">
+    <div class="note-icon">💡</div>
+    <p>Bucket names must be globally unique. Pick something like <code>{your-name}-sandbox-storage</code>. The region <strong>must match</strong> <code>AWS_DEFAULT_REGION</code> set in <code>pod.js</code> — currently <code>ap-southeast-1</code>.</p>
+  </div>
+
+  <div class="step-label">Step 2 — Bucket layout</div>
+  <p>Each sandbox gets its own prefix inside the bucket:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">S3 layout</span></div>
+<pre>your-sandbox-bucket-name/
+├── 019e0c88-c124-73c4-.../
+│   ├── package.json
+│   ├── vite.config.js
+│   └── src/...
+├── 019e0d18-bdbd-735a-.../
+│   ├── package.json
+│   └── ...
+└── ...</pre>
+  </div>
+
+  <p>The orchestrator passes <code>process.env.S3_BUCKET</code> to each sync sidecar; the sidecar reads from and writes to <code>{bucket}/{sandboxId}/</code>.</p>
+</section>
+
+<!-- ─── 08 IAM ─── -->
+<section class="section" id="iam">
+  <div class="section-header">
+    <div class="section-num-big">08</div>
+    <div class="section-title-block">
+      <div class="section-title">IAM credentials</div>
+      <div class="section-subtitle">Scoped to just this bucket — never use root keys</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="note-icon">⚠️</div>
+    <p><strong>Do not use AWS root credentials.</strong> Even though the sync sidecar is locked down, key rotation and audit are far easier with a dedicated IAM user. Treat the access key as production-grade — it goes into a Kubernetes secret your whole team can pull.</p>
+  </div>
+
+  <div class="step-label">Step 1 — Create an IAM user</div>
+  <p>In the AWS console: IAM → Users → Create user → name it <code>sandbox-sync</code>. Don't grant console access; programmatic access only.</p>
+
+  <div class="step-label">Step 2 — Attach this inline policy</div>
+  <p>Replace <code>your-sandbox-bucket-name</code> with your actual bucket. The policy grants only what the sync sidecar needs — list, get, put, delete on objects, and list on the bucket itself.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">sandbox-sync-policy.json</span></div>
+<pre>{
+  <span class="c-key">"Version"</span>: <span class="c-str">"2012-10-17"</span>,
+  <span class="c-key">"Statement"</span>: [
+    {
+      <span class="c-key">"Effect"</span>: <span class="c-str">"Allow"</span>,
+      <span class="c-key">"Action"</span>: [
+        <span class="c-str">"s3:PutObject"</span>,
+        <span class="c-str">"s3:GetObject"</span>,
+        <span class="c-str">"s3:DeleteObject"</span>,
+        <span class="c-str">"s3:ListBucket"</span>
+      ],
+      <span class="c-key">"Resource"</span>: [
+        <span class="c-str">"arn:aws:s3:::your-sandbox-bucket-name"</span>,
+        <span class="c-str">"arn:aws:s3:::your-sandbox-bucket-name/*"</span>
+      ]
+    }
+  ]
+}</pre>
+  </div>
+
+  <div class="step-label">Step 3 — Generate access keys</div>
+  <p>Go to the user → Security credentials → Create access key → choose "Application running outside AWS" → save the access key ID and secret somewhere safe. You won't see the secret again.</p>
+
+  <table class="flag-table">
+    <thead><tr><th>Permission</th><th>Why the sync agent needs it</th></tr></thead>
+    <tbody>
+      <tr><td><span class="f-name">s3:ListBucket</span></td><td class="f-desc">To check whether a sandbox prefix already has files (new sandbox vs existing).</td></tr>
+      <tr><td><span class="f-name">s3:GetObject</span></td><td class="f-desc">To download files into <code>/workspace</code> when an existing sandbox is restarted.</td></tr>
+      <tr><td><span class="f-name">s3:PutObject</span></td><td class="f-desc">To seed new sandboxes with the template and to push every file change.</td></tr>
+      <tr><td><span class="f-name">s3:DeleteObject</span></td><td class="f-desc">To mirror file deletions in the watcher.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 09 SECRET ─── -->
+<section class="section" id="secret">
+  <div class="section-header">
+    <div class="section-num-big">09</div>
+    <div class="section-title-block">
+      <div class="section-title">Create the Kubernetes secret</div>
+      <div class="section-subtitle">Wrap the AWS keys so they're injected at runtime instead of baked into images</div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">kubectl</span> create secret generic aws-credentials <span class="c-pipe">\</span>
+  <span class="c-flag">--from-literal</span>=<span class="c-val">AWS_ACCESS_KEY_ID=AKIA...</span> <span class="c-pipe">\</span>
+  <span class="c-flag">--from-literal</span>=<span class="c-val">AWS_SECRET_ACCESS_KEY=...</span> <span class="c-pipe">\</span>
+  <span class="c-flag">-n</span> <span class="c-val">default</span></pre>
+  </div>
+
+  <div class="step-label green">Verify</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">kubectl</span> get secret aws-credentials
+<span class="c-comment"># NAME              TYPE     DATA   AGE</span>
+<span class="c-comment"># aws-credentials   Opaque   2      5s</span></pre>
+  </div>
+
+  <h3>How the orchestrator wires this up</h3>
+  <p>In <code>sandbox/src/kubernetes/pod.js</code>, the sync sidecar references the secret via <code>secretKeyRef</code>:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">pod.js (sync sidecar env)</span></div>
+<pre>env: [
+  { <span class="c-key">name</span>: <span class="c-str">"AWS_ACCESS_KEY_ID"</span>,
+    <span class="c-key">valueFrom</span>: { <span class="c-key">secretKeyRef</span>: {
+      <span class="c-key">name</span>: <span class="c-str">"aws-credentials"</span>,
+      <span class="c-key">key</span>: <span class="c-str">"AWS_ACCESS_KEY_ID"</span>
+    }}
+  },
+  { <span class="c-key">name</span>: <span class="c-str">"AWS_SECRET_ACCESS_KEY"</span>,
+    <span class="c-key">valueFrom</span>: { <span class="c-key">secretKeyRef</span>: {
+      <span class="c-key">name</span>: <span class="c-str">"aws-credentials"</span>,
+      <span class="c-key">key</span>: <span class="c-str">"AWS_SECRET_ACCESS_KEY"</span>
+    }}
+  }
+]</pre>
+  </div>
+
+  <h3>Set the bucket name in the orchestrator deployment</h3>
+  <p>The orchestrator reads <code>S3_BUCKET</code> from its own env at request time and forwards it to the sync sidecar. Edit <code>k8s/sandbox-deployment.yml</code>:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">k8s/sandbox-deployment.yml</span></div>
+<pre>env:
+- <span class="c-key">name</span>: <span class="c-val">S3_BUCKET</span>
+  <span class="c-key">value</span>: <span class="c-val">your-sandbox-bucket-name</span>     <span class="c-comment"># ← change this</span></pre>
+  </div>
+
+  <div class="warn">
+    <div class="note-icon">⚠️</div>
+    <p>If <code>S3_BUCKET</code> is missing, <code>POST /api/sandbox/start</code> will return a 500 with <strong>"S3_BUCKET env var is not set"</strong>. The orchestrator deliberately refuses to create a sandbox without it.</p>
+  </div>
+</section>
+
+<!-- ─── 10 IMAGES ─── -->
+<section class="section" id="images">
+  <div class="section-header">
+    <div class="section-num-big">10</div>
+    <div class="section-title-block">
+      <div class="section-title">Build container images</div>
+      <div class="section-subtitle">Skaffold handles all four images in one shot</div>
+    </div>
+  </div>
+
+  <p>The cluster needs four images locally: <code>sandbox</code> (orchestrator), <code>template</code> (Vite), <code>sandbox-agent</code> (terminal), and <code>sandbox-sync</code> (S3 sync). Pod manifests use <code>imagePullPolicy: Never</code> so Kubernetes uses the local Docker daemon's images directly.</p>
+
+  <div class="step-label">Build everything via skaffold</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">skaffold</span> build</pre>
+  </div>
+
+  <div class="step-label blue">Or build images individually</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-comment"># Run from repo root</span>
+<span class="c-cmd">docker</span> build -t <span class="c-val">sandbox:latest</span> ./sandbox
+<span class="c-cmd">docker</span> build -t <span class="c-val">template:latest</span> ./template
+<span class="c-cmd">docker</span> build -t <span class="c-val">sandbox-agent:latest</span> ./sandbox-agents/comm-agent
+<span class="c-cmd">docker</span> build -t <span class="c-val">sandbox-sync:latest</span> -f sandbox-agents/sync-agent/dockerfile .</pre>
+  </div>
+
+  <div class="note">
+    <div class="note-icon">💡</div>
+    <p>The sync image's build context is the <strong>repo root</strong> (note the trailing <code>.</code>) so its dockerfile can <code>COPY template /template</code>. Don't run it from inside <code>sandbox-agents/sync-agent</code>.</p>
+  </div>
+
+  <div class="step-label green">Verify all four exist</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">docker</span> images <span class="c-pipe">|</span> <span class="c-cmd">grep</span> -E <span class="c-str">"sandbox|template"</span>
+<span class="c-comment"># Should list: sandbox, template, sandbox-agent, sandbox-sync</span></pre>
+  </div>
+</section>
+
+<!-- ─── 11 DEPLOY ─── -->
+<section class="section" id="deploy">
+  <div class="section-header">
+    <div class="section-num-big">11</div>
+    <div class="section-title-block">
+      <div class="section-title">Deploy to the cluster</div>
+      <div class="section-subtitle">Apply the orchestrator deployment, service, ingress, and RBAC</div>
+    </div>
+  </div>
+
+  <div class="step-label">One-shot deploy with skaffold</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">skaffold</span> dev</pre>
+  </div>
+
+  <p><code>skaffold dev</code> builds images, applies all manifests, streams logs, and re-deploys on file changes. Hit <code>Ctrl+C</code> to clean up.</p>
+
+  <div class="step-label blue">Or apply manifests directly</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">kubectl</span> apply -f k8s/rbac.yaml
+<span class="c-cmd">kubectl</span> apply -f k8s/sandbox-deployment.yml
+<span class="c-cmd">kubectl</span> apply -f k8s/sandbox-service.yml
+<span class="c-cmd">kubectl</span> apply -f k8s/ingress.yml</pre>
+  </div>
+
+  <h3>What RBAC does</h3>
+  <div class="concept">
+    <div class="concept-label">Why this matters</div>
+    <p>The orchestrator runs as a pod itself and needs to create <strong>pods</strong>, <strong>services</strong>, and <strong>ingresses</strong> in the <code>default</code> namespace. <code>k8s/rbac.yaml</code> defines a Role with exactly those verbs and binds it to the <code>default</code> ServiceAccount. Without it, every API call the orchestrator makes will return 403.</p>
+  </div>
+
+  <div class="step-label green">Verify the orchestrator is running</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">kubectl</span> get pods
+<span class="c-comment"># NAME                                  READY   STATUS</span>
+<span class="c-comment"># sandbox-deployment-xxx-xxx            1/1     Running</span>
+
+<span class="c-cmd">curl</span> http://localhost/api/sandbox/health
+<span class="c-comment"># {"message":"Sandbox API is healthy"}</span></pre>
+  </div>
+</section>
+
+<!-- ─── 12 FRONTEND ─── -->
+<section class="section" id="frontend">
+  <div class="section-header">
+    <div class="section-num-big">12</div>
+    <div class="section-title-block">
+      <div class="section-title">Run the frontend</div>
+      <div class="section-subtitle">Lives outside the cluster, proxies API calls to it</div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">cd</span> frontend
+<span class="c-cmd">npm</span> install
+<span class="c-cmd">npm</span> run dev</pre>
+  </div>
+
+  <p>Open <code>http://localhost:5173</code> and click <strong>start sandbox</strong>. You should see:</p>
+
+  <ul>
+    <li>A new pod appear in <code>kubectl get pods</code> within seconds</li>
+    <li>Two URLs returned in the response — one for preview, one for the agent</li>
+    <li>An xterm terminal mount that streams shell I/O over WebSocket</li>
+  </ul>
+
+  <h3>How the frontend wires to the cluster</h3>
+  <p>The Vite config in <code>frontend/vite.config.js</code> proxies <code>/api</code> to the orchestrator running inside the cluster:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">frontend/vite.config.js</span></div>
+<pre>server: {
+  <span class="c-key">proxy</span>: {
+    <span class="c-str">'/api'</span>: {
+      <span class="c-key">target</span>: <span class="c-str">'http://localhost'</span>,
+      <span class="c-key">changeOrigin</span>: <span class="c-val">true</span>,
+    }
+  }
+}</pre>
+  </div>
+
+  <p>The xterm terminal connects directly to <code>{sandboxId}.agent.localhost</code> over WebSocket — no Vite proxy involved. dnsmasq + nginx ingress route that traffic to the right pod.</p>
+</section>
+
+<!-- ─── 13 TESTING ─── -->
+<section class="section" id="testing">
+  <div class="section-header">
+    <div class="section-num-big">13</div>
+    <div class="section-title-block">
+      <div class="section-title">Sanity tests</div>
+      <div class="section-subtitle">Run these end-to-end after first setup</div>
+    </div>
+  </div>
+
+  <div class="step-label">DNS resolves</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">dig</span> +short test.preview.localhost
+<span class="c-comment"># 127.0.0.1</span></pre>
+  </div>
+
+  <div class="step-label">Cluster is reachable</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">curl</span> http://localhost/api/sandbox/health
+<span class="c-comment"># {"message":"Sandbox API is healthy"}</span></pre>
+  </div>
+
+  <div class="step-label">Start a sandbox end-to-end</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">curl</span> -X POST http://localhost/api/sandbox/start
+<span class="c-comment"># Returns { sandboxId, urls: { previewUrl, agentUrl } }</span></pre>
+  </div>
+
+  <div class="step-label green">S3 received the seed</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-cmd">aws</span> s3 ls s3://your-sandbox-bucket-name/{sandboxId}/
+<span class="c-comment"># Should list package.json, vite.config.js, src/, etc.</span></pre>
+  </div>
+</section>
+
+<!-- ─── 14 TROUBLESHOOTING ─── -->
+<section class="section" id="troubleshoot">
+  <div class="section-header">
+    <div class="section-num-big">14</div>
+    <div class="section-title-block">
+      <div class="section-title">Troubleshooting</div>
+      <div class="section-subtitle">Real failure modes encountered during development</div>
+    </div>
+  </div>
+
+  <table class="compare">
+    <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="row-label">ECONNREFUSED 127.0.0.1:80</td>
+        <td class="local-val">Nginx ingress not installed or not bound to localhost</td>
+        <td class="eks-val">Reinstall ingress-nginx; verify EXTERNAL-IP=localhost</td>
+      </tr>
+      <tr>
+        <td class="row-label">503 Service Unavailable</td>
+        <td class="local-val">Pod not ready, service selector mismatch, or all containers crashing</td>
+        <td class="eks-val"><code>kubectl describe pod</code> — check Events</td>
+      </tr>
+      <tr>
+        <td class="row-label">ErrImageNeverPull</td>
+        <td class="local-val">Image not built locally</td>
+        <td class="eks-val">Run <code>skaffold build</code> or build manually</td>
+      </tr>
+      <tr>
+        <td class="row-label">Init:0/1 stuck forever</td>
+        <td class="local-val">Sync-init can't reach S3 (bad creds or wrong region)</td>
+        <td class="eks-val">Check sync-init logs; verify secret + S3_BUCKET</td>
+      </tr>
+      <tr>
+        <td class="row-label">vite: not found</td>
+        <td class="local-val"><code>npm install</code> didn't run in <code>/workspace</code></td>
+        <td class="eks-val">Check sync-init logs for the install step</td>
+      </tr>
+      <tr>
+        <td class="row-label">Terminal accepts no input</td>
+        <td class="local-val">xterm not focused, or non-interactive shell</td>
+        <td class="eks-val">Click terminal; verify <code>-i</code> flag in pty spawn</td>
+      </tr>
+      <tr>
+        <td class="row-label">configuration-snippet denied</td>
+        <td class="local-val">Cluster admin disabled snippet annotations</td>
+        <td class="eks-val">Remove snippet; modern nginx handles WS auto</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Useful kubectl commands</h3>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-label">Terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre><span class="c-comment"># All pods, services, ingresses</span>
+<span class="c-cmd">kubectl</span> get all
+
+<span class="c-comment"># Why is a pod failing?</span>
+<span class="c-cmd">kubectl</span> describe pod <span class="c-val">&lt;pod-name&gt;</span>
+
+<span class="c-comment"># Stream logs from one container</span>
+<span class="c-cmd">kubectl</span> logs <span class="c-val">&lt;pod-name&gt;</span> <span class="c-flag">-c</span> <span class="c-val">&lt;container-name&gt;</span> <span class="c-flag">-f</span>
+
+<span class="c-comment"># Service endpoints — empty means selector mismatch</span>
+<span class="c-cmd">kubectl</span> get endpoints <span class="c-val">&lt;service-name&gt;</span>
+
+<span class="c-comment"># Tear down a stuck sandbox manually</span>
+<span class="c-cmd">kubectl</span> delete pod sandbox-pod-<span class="c-val">&lt;id&gt;</span>
+<span class="c-cmd">kubectl</span> delete service sandbox-service-<span class="c-val">&lt;id&gt;</span>
+<span class="c-cmd">kubectl</span> delete ingress sandbox-ingress-<span class="c-val">&lt;id&gt;</span></pre>
+  </div>
+
+  <hr class="divider">
+
+  <div class="concept">
+    <div class="concept-label">If all else fails</div>
+    <p>Run <code>kubectl describe pod &lt;name&gt;</code> and read the <strong>Events</strong> section at the bottom. 90% of failures self-explain there: image pull errors, OOM kills, scheduling failures, secret-not-found. Check <code>kubectl get events --sort-by='.lastTimestamp'</code> for cluster-level events.</p>
+  </div>
+</section>
+
+<footer>
+  <span>Sandbox Orchestration · Internal onboarding doc</span>
+  <span>Cluster: docker-desktop · Region: ap-southeast-1 · Namespace: default</span>
+</footer>
+
+</main>
+</div>
+
+<script>
+function copyCode(btn) {
+  const wrap = btn.closest('.code-wrap');
+  const pre = wrap.querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.innerText;
+    btn.innerText = 'copied';
+    setTimeout(() => btn.innerText = original, 1500);
+  });
+}
+
+// Active nav item on scroll
+const sections = document.querySelectorAll('.section, .hero');
+const navLinks = document.querySelectorAll('nav a');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
