@@ -926,8 +926,7 @@ An Ingress holds only **rules** ("send this path to that service"). Someone stil
 ### Install it
 
 ```bash
-kubectl apply -f \
-  https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
 ```
 
 ### Verify it
